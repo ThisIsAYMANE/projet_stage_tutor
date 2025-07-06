@@ -12,10 +12,41 @@ const LoginPage: React.FC = () => {
   const [rememberMe, setRememberMe] = useState(false);
   const [languageDropdown, setLanguageDropdown] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
-    console.log('Login attempt:', { email, password, rememberMe });
+    
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email,
+          password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(`Login failed: ${data.error}`);
+        return;
+      }
+
+      // Login successful
+      alert(`Login successful!\nUser ID: ${data.user.id}\nName: ${data.user.Name}\nEmail: ${data.user.email}\nUser Type: ${data.user.userType}`);
+      
+      // Store user data in localStorage or session storage
+      localStorage.setItem('user', JSON.stringify(data.user));
+      
+      // Redirect to dashboard or home page
+      window.location.href = '/';
+      
+    } catch (error) {
+      console.error('Login error:', error);
+      alert(`Login error: ${error}`);
+    }
   };
 
   const handleGoogleLogin = () => {

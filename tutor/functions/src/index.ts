@@ -1,32 +1,53 @@
-/**
- * Import function triggers from their respective submodules:
- *
- * import {onCall} from "firebase-functions/v2/https";
- * import {onDocumentWritten} from "firebase-functions/v2/firestore";
- *
- * See a full list of supported triggers at https://firebase.google.com/docs/functions
- */
+import * as functions from "firebase-functions";
+import * as admin from "firebase-admin";
+import * as bcrypt from "bcryptjs";
 
-import {setGlobalOptions} from "firebase-functions";
-import {onRequest} from "firebase-functions/https";
-import * as logger from "firebase-functions/logger";
+admin.initializeApp();
+const db = admin.firestore();
 
-// Start writing functions
-// https://firebase.google.com/docs/functions/typescript
+export const registerUser = functions.https.onRequest(async (req, res) => {
+  if (req.method !== "POST") {
+    res.status(405).send("Method Not Allowed");
+    return;
+  }
 
-// For cost control, you can set the maximum number of containers that can be
-// running at the same time. This helps mitigate the impact of unexpected
-// traffic spikes by instead downgrading performance. This limit is a
-// per-function limit. You can override the limit for each function using the
-// `maxInstances` option in the function's options, e.g.
-// `onRequest({ maxInstances: 5 }, (req, res) => { ... })`.
-// NOTE: setGlobalOptions does not apply to functions using the v1 API. V1
-// functions should each use functions.runWith({ maxInstances: 10 }) instead.
-// In the v1 API, each function can only serve one request per container, so
-// this will be the maximum concurrent request count.
-setGlobalOptions({ maxInstances: 10 });
+  const { name, email, password } = req.body;
 
-// export const helloWorld = onRequest((request, response) => {
-//   logger.info("Hello logs!", {structuredData: true});
-//   response.send("Hello from Firebase!");
-// });
+  if (!name || !email || !password) {
+    res.status(400).json({ error: "Missing fields" });
+    return;
+  }
+
+  try {
+    // Check if user already exists
+    const usersRef = db.collection("users");
+    const existing = await usersRef.where("email", "==", email).get();
+    if (!existing.empty) {
+      res.status(409).json({ error: "Email already in use" });
+      return;
+    }
+
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // Create user document
+    const now = admin.firestore.FieldValue.serverTimestamp();
+    const userDoc = {
+      email,
+      password: hashedPassword,
+      Name: name,
+      createdAt: now,
+      updatedAt: now,
+      profilePicture: "",
+      userType: "student",
+      isTutor: false,
+    };
+
+    const newUserRef = await usersRef.add(userDoc);
+
+    res.status(201).json({ userId: newUserRef.id });
+  } catch (error) {
+    console.error("Registration error:", error);
+    res.status(500).json({ error: "Internal server error" });
+  }
+});

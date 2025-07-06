@@ -22,10 +22,35 @@ const SignUpPage: React.FC = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle signup logic here
-    console.log('Signup data:', formData);
+    
+    try {
+      const response = await fetch('/api/register', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          password: formData.password,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        alert(data.error || 'Registration failed');
+        return;
+      }
+
+      // Registration successful - redirect to login page
+      window.location.href = '../login';
+    } catch (error) {
+      console.error('Registration error:', error);
+      alert('An error occurred during registration.');
+    }
   };
 
   const togglePasswordVisibility = () => {

@@ -21,14 +21,22 @@ const ForgotPasswordPage = () => {
         body: JSON.stringify({ email }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error('Failed to send reset email');
+        alert(`Error: ${data.error}`);
+        return;
       }
 
-      alert('Password reset email sent! Check your inbox.');
+      // Show success message
+      alert(`Password reset email sent successfully!\n\nCheck your email (${data.user.email}) for the reset link.\n\nThe link will expire in 1 hour.\n\nFor testing, you can also check the browser console for the reset link.`);
+      
+      // Log reset link to console for testing
+      console.log('Reset link for testing:', data.resetLink || 'Check API response for reset link');
+      
     } catch (error) {
       console.error('Error:', error);
-      alert('Failed to send reset email. Please try again.');
+      alert(`Failed to send reset email: ${error}`);
     } finally {
       setIsSubmitting(false);
     }

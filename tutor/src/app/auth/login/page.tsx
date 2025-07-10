@@ -125,7 +125,7 @@ const LoginPage: React.FC = () => {
                 Sign up as a student
               </Link>
               {' or '}
-              <Link href="" className={styles.signupLink}>
+              <Link href="../tutor-auth" className={styles.signupLink}>
                 Sign up as a tutor
               </Link>
             </p>

@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Eye, EyeOff, HelpCircle, ChevronDown } from 'lucide-react';
 import styles from '../../../styles/signup.module.css';
+import { adminDb } from '../../../lib/firebase-admin';
 
 const SignUpPage: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);

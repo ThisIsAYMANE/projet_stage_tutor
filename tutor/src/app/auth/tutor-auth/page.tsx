@@ -6,6 +6,8 @@ import styles from '../../../styles/TutorSignup.module.css';
 import { Eye, EyeOff, Home, MapPin, Video, CheckCircle } from 'lucide-react';
 import Link from 'next/link';
 
+type TeachingMethod = 'home' | 'move' | 'online';
+
 interface FormData {
   email: string;
   password: string;
@@ -14,16 +16,16 @@ interface FormData {
   title: string;
   description: string;
   location: string;
-  teachingMethods: string[];
+  teachingMethods: TeachingMethod[];
   languages: string[];
   hourlyRate: string;
   phone: string;
   picture: File | null;
-  name: string; // Added for the first step
-  profilePicturePreview: string | null; // Added for the picture step
+  name: string;
+  picturePreview: string | null; // Renamed from profilePicturePreview for consistency
 }
 
-const TutorSignup: React.FC = () => {
+const TutorSignup = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<FormData>({
@@ -39,13 +41,12 @@ const TutorSignup: React.FC = () => {
     hourlyRate: '',
     phone: '',
     picture: null,
-    name: '', // Initialize name field
-    profilePicturePreview: null, // Initialize profile picture preview
+    name: '',
+    picturePreview: null,
   });
-  const [picturePreview, setPicturePreview] = useState<string | null>(null);
+
   const [languageDropdown, setLanguageDropdown] = useState(false);
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
-  const [locationLoading, setLocationLoading] = useState(false);
   const [languageInput, setLanguageInput] = useState('');
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [nameError, setNameError] = useState('');
@@ -66,6 +67,21 @@ const TutorSignup: React.FC = () => {
     'Confirmation',
   ];
 
+  // Predefined cities in Morocco
+  const moroccanCities = [
+    'Casablanca', 'Rabat', 'Fez', 'Marrakech', 'Agadir', 'Tangier', 'Meknes', 'Oujda', 
+    'Kenitra', 'Tetouan', 'Safi', 'El Jadida', 'Beni Mellal', 'Taza', 'Nador', 'Settat',
+    'Larache', 'Khouribga', 'Ouarzazate', 'Tiflet', 'Berkane', 'Sidi Slimane', 'Guelmim',
+    'Khemisset', 'Benslimane', 'Ifrane', 'Dakhla', 'Midelt', 'Azrou', 'Chefchaouen'
+  ];
+
+  // Predefined languages
+  const predefinedLanguages = [
+    'Arabic', 'French', 'English', 'Spanish', 'German', 'Italian', 'Portuguese', 
+    'Dutch', 'Russian', 'Chinese', 'Japanese', 'Korean', 'Turkish', 'Berber', 
+    'Tamazight', 'Hassaniya', 'Classical Arabic'
+  ];
+
   const handleInputChange = (field: keyof FormData, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
@@ -79,10 +95,10 @@ const TutorSignup: React.FC = () => {
     handleInputChange('picture', file);
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => setFormData(prev => ({ ...prev, profilePicturePreview: reader.result as string }));
+      reader.onloadend = () => setFormData(prev => ({ ...prev, picturePreview: reader.result as string }));
       reader.readAsDataURL(file);
     } else {
-      setFormData(prev => ({ ...prev, profilePicturePreview: null }));
+      setFormData(prev => ({ ...prev, picturePreview: null }));
     }
   };
 
@@ -90,22 +106,16 @@ const TutorSignup: React.FC = () => {
     const value = e.target.value;
     handleInputChange('location', value);
 
-    if (value.length < 3) {
+    if (value.length < 2) {
       setLocationSuggestions([]);
       return;
     }
 
-    setLocationLoading(true);
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}`
-      );
-      const data = await res.json();
-      setLocationSuggestions(data.map((item: any) => item.display_name));
-    } catch (err) {
-      setLocationSuggestions([]);
-    }
-    setLocationLoading(false);
+    // Filter predefined Moroccan cities
+    const filteredCities = moroccanCities.filter(city =>
+      city.toLowerCase().includes(value.toLowerCase())
+    );
+    setLocationSuggestions(filteredCities);
   };
 
   const handleLocationSelect = (suggestion: string) => {
@@ -129,65 +139,120 @@ const TutorSignup: React.FC = () => {
   };
 
   const nextStep = () => {
-    // Step 0: validate each field and show message under the relevant input
-    if (currentStep === 0) {
-      let valid = true;
+    // Clear previous validation messages
+    setValidationMessage('');
       setNameError('');
       setEmailError('');
       setPasswordError('');
+
+    // Step 0: validate each field and show message under the relevant input
+    if (currentStep === 0) {
       if (!formData.name) {
         setNameError('Please enter your name.');
-        valid = false;
+        return;
       }
       if (!formData.email) {
         setEmailError('Please enter your email.');
-        valid = false;
-      } else if (!validateEmail(formData.email)) {
+        return;
+      }
+      if (!validateEmail(formData.email)) {
         setEmailError('Please enter a valid email address.');
-        valid = false;
+        return;
       }
       if (!formData.password) {
         setPasswordError('Please enter your password.');
-        valid = false;
-      } else if (!validatePassword(formData.password)) {
-        setPasswordError('Password must be at least 8 characters, include a number and a special character.');
-        valid = false;
+        return;
       }
-      if (!valid) return;
+      if (!validatePassword(formData.password)) {
+        setPasswordError('Password must be at least 8 characters, include a number and a special character.');
+        return;
+      }
     }
-    // Steps 1-8: use setValidationMessage as before
+    
+    // Step 1: Subject selection validation
     if (currentStep === 1) {
-      if (!formData.subjects || formData.subjects.length === 0) {
+      if (!formData.subjects || formData.subjects.length === 0 || !formData.subjects[0].trim()) {
         setValidationMessage('Please select at least one subject.');
         return;
       }
     }
+    
+    // Step 2: Profile title validation - minimum 40 words
     if (currentStep === 2) {
-      if (!formData.title) {
+      if (!formData.title || !formData.title.trim()) {
         setValidationMessage('Please enter a profile title.');
         return;
       }
+      const wordCount = formData.title.trim().split(/\s+/).filter(word => word.length > 0).length;
+      if (wordCount < 40) {
+        setValidationMessage(`Profile title must be at least 40 words. Current: ${wordCount} words.`);
+        return;
     }
+    }
+    
+    // Step 3: About you validation - minimum 40 words
     if (currentStep === 3) {
-      if (!formData.location) {
+      if (!formData.description || !formData.description.trim()) {
+        setValidationMessage('Please enter a description about yourself.');
+        return;
+      }
+      const wordCount = formData.description.trim().split(/\s+/).filter(word => word.length > 0).length;
+      if (wordCount < 40) {
+        setValidationMessage(`Description must be at least 40 words. Current: ${wordCount} words.`);
+        return;
+    }
+    }
+    
+    // Step 4: Location validation
+    if (currentStep === 4) {
+      if (!formData.location || !formData.location.trim()) {
         setValidationMessage('Please enter your teaching location.');
         return;
       }
-    }
-    if (currentStep === 4) {
-      if (!formData.description) {
-        setValidationMessage('Please enter a description.');
+      // Validate that the location is from the predefined list
+      if (!moroccanCities.some(city => city.toLowerCase() === formData.location.trim().toLowerCase())) {
+        setValidationMessage('Please select a valid city from the suggestions.');
+        return;
+      }
+      // Check if at least one teaching method is selected
+      if (formData.teachingMethods.length === 0) {
+        setValidationMessage('Please select at least one teaching method.');
         return;
       }
     }
+    
+    // Step 5: Languages validation
+    if (currentStep === 5) {
+      if (formData.languages.length === 0) {
+        setValidationMessage('Please select at least one language.');
+        return;
+      }
+      // Validate that all selected languages are from the predefined list
+      const invalidLanguages = formData.languages.filter(lang => 
+        !predefinedLanguages.some(predefined => predefined.toLowerCase() === lang.toLowerCase())
+      );
+      if (invalidLanguages.length > 0) {
+        setValidationMessage('Please select languages from the predefined list only.');
+        return;
+      }
+    }
+    
+    // Step 6: Hourly rate validation
     if (currentStep === 6) {
-      if (!formData.hourlyRate) {
+      if (!formData.hourlyRate || !formData.hourlyRate.trim()) {
         setValidationMessage('Please enter your hourly rate.');
         return;
       }
+      const rate = parseFloat(formData.hourlyRate);
+      if (isNaN(rate) || rate <= 0) {
+        setValidationMessage('Please enter a valid hourly rate (greater than 0).');
+        return;
     }
+    }
+    
+    // Step 7: Phone validation
     if (currentStep === 7) {
-      if (!formData.phone) {
+      if (!formData.phone || !formData.phone.trim()) {
         setValidationMessage('Please enter your phone number.');
         return;
       }
@@ -196,8 +261,10 @@ const TutorSignup: React.FC = () => {
         return;
       }
     }
+    
+    // Step 8: Profile picture validation
     if (currentStep === 8) {
-      if (!formData.profilePicturePreview) {
+      if (!formData.picturePreview) {
         setValidationMessage('Please add a profile picture.');
         return;
       }
@@ -206,6 +273,7 @@ const TutorSignup: React.FC = () => {
         return;
       }
     }
+    
     if (currentStep > 0) setValidationMessage('');
     setCurrentStep((prev) => prev + 1);
   };
@@ -215,16 +283,27 @@ const TutorSignup: React.FC = () => {
   };
 
   const handleTutorSignup = async () => {
+    // Convert image to base64 if it exists
+    let pictureBase64 = '';
+    if (formData.picture) {
+      pictureBase64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result as string);
+        reader.readAsDataURL(formData.picture!);
+      });
+    }
+
     const tutorProfile = {
       name: formData.name,
       email: formData.email,
+      password: formData.password, // Include password for account creation
       phone: formData.phone,
       subjects: formData.subjects,
       title: formData.title,
       location: formData.location,
       teachingMethods: formData.teachingMethods,
       languages: formData.languages,
-      picture: formData.picture || '',
+      picture: pictureBase64, // Send base64 string instead of File object
       bio: formData.description,
       hourlyRate: Number(formData.hourlyRate),
       experience: '', // You can add a step for this or leave empty
@@ -235,11 +314,13 @@ const TutorSignup: React.FC = () => {
       averageRating: 0,
       totalReviews: 0,
     };
+    
     const res = await fetch('/api/tutor-register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(tutorProfile),
     });
+    
     if (res.ok) {
       window.location.href = '/dashboard';
     } else {
@@ -399,9 +480,12 @@ const TutorSignup: React.FC = () => {
         return (
           <div className={styles.step}>
             <h2>Which subjects do you teach?</h2>
+            <p style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
+              Enter the main subject you teach (e.g., Mathematics, Physics, English, etc.)
+            </p>
             <input
               type="text"
-              placeholder="Try 'Math'"
+              placeholder="e.g., Mathematics, Physics, English"
               value={formData.subjects[0] || ''}
               onChange={e => handleInputChange('subjects', [e.target.value])}
               className={styles.input}
@@ -422,13 +506,19 @@ const TutorSignup: React.FC = () => {
           <div className={styles.step}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>Profile Title</h2>
+              <p style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
+                Minimum 40 words required
+              </p>
               <textarea
                 placeholder="ex: Conservatory graduate..."
                 value={formData.title}
                 onChange={e => handleInputChange('title', e.target.value)}
                 className={styles.textarea}
-                style={{ width: '500px', height: '200px', marginBottom: '2rem', resize: 'none' }}
+                style={{ width: '500px', height: '200px', marginBottom: '0.5rem', resize: 'none' }}
               />
+              <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '1.5rem' }}>
+                Word count: {formData.title ? formData.title.trim().split(/\s+/).filter(word => word.length > 0).length : 0}/40
+              </div>
               {validationMessage && <div className={styles.validationMessage}>{validationMessage}</div>}
               <div className={styles.buttonRow}>
                 {currentStep > 0 && (
@@ -446,6 +536,9 @@ const TutorSignup: React.FC = () => {
           <div className={styles.step}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', }}>
               <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>About You</h2>
+              <p style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
+                Minimum 40 words required
+              </p>
               <textarea
                 className={styles.textarea}
                 placeholder="ex: Conservatory graduate..."
@@ -453,8 +546,11 @@ const TutorSignup: React.FC = () => {
                 onChange={e => handleInputChange('description', e.target.value)}
                 rows={6}
                 aria-label="About you"
-                style={{ width: '500px', height: '200px', marginBottom: '2rem', display: 'block',resize: 'none' }}
+                style={{ width: '500px', height: '200px', marginBottom: '0.5rem', display: 'block',resize: 'none' }}
               />
+              <div style={{ fontSize: '0.8rem', color: '#666', marginBottom: '1.5rem' }}>
+                Word count: {formData.description ? formData.description.trim().split(/\s+/).filter(word => word.length > 0).length : 0}/40
+              </div>
               {validationMessage && <div className={styles.validationMessage}>{validationMessage}</div>}
               <div className={styles.buttonRow}>
                 {currentStep > 0 && (
@@ -473,10 +569,13 @@ const TutorSignup: React.FC = () => {
             <div className={styles.locationRow}>
               <div className={styles.locationInputCol}>
                 <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>Course Location</h2>
+                <p style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
+                  Select a city from the list below
+                </p>
                 <div style={{ position: 'relative', width: '100%', maxWidth: 500, margin: '0 auto' }}>
                   <input
                     type="text"
-                    placeholder="Start typing your location..."
+                    placeholder="Start typing a Moroccan city..."
                     value={formData.location}
                     onChange={handleLocationInput}
                     className={styles.input}
@@ -484,7 +583,6 @@ const TutorSignup: React.FC = () => {
                     style={{ width: '100%' }}
                     aria-label="Course location"
                   />
-                  {locationLoading && <div>Loading...</div>}
                   {locationSuggestions.length > 0 && (
                     <ul className={styles.suggestionDropdown}>
                       {locationSuggestions.map((suggestion, idx) => (
@@ -559,11 +657,7 @@ const TutorSignup: React.FC = () => {
           </div>
         );
       case 5:
-        // List of common languages
-        const allLanguages = [
-          'English', 'French', 'Spanish', 'German', 'Italian', 'Arabic', 'Chinese', 'Japanese', 'Russian', 'Portuguese', 'Hindi', 'Dutch', 'Turkish', 'Korean', 'Polish', 'Swedish', 'Greek', 'Czech', 'Danish', 'Finnish', 'Hebrew', 'Hungarian', 'Indonesian', 'Norwegian', 'Romanian', 'Thai', 'Ukrainian', 'Vietnamese', 'Other'
-        ];
-        const filteredLanguages = allLanguages.filter(
+        const filteredLanguages = predefinedLanguages.filter(
           lang =>
             lang.toLowerCase().includes(languageInput.toLowerCase()) &&
             !formData.languages.includes(lang)
@@ -579,6 +673,9 @@ const TutorSignup: React.FC = () => {
           <div className={styles.step}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>Languages Spoken</h2>
+              <p style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
+                Select languages from the list below
+              </p>
               <div style={{ width: '350px', marginBottom: '1rem', position: 'relative' }}>
                 <div className={styles.languageTagsRow}>
                   {formData.languages.map(lang => (
@@ -635,6 +732,9 @@ const TutorSignup: React.FC = () => {
           <div className={styles.step}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>Hourly Rate</h2>
+              <p style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
+                Set your hourly rate in Moroccan Dirhams (MAD)
+              </p>
               <div className={styles.inputWithUnit} style={{ width: '350px', marginBottom: '2rem', position: 'relative' }}>
                 <input
                   type="number"
@@ -664,6 +764,9 @@ const TutorSignup: React.FC = () => {
           <div className={styles.step}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>Phone Number</h2>
+              <p style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
+                Enter your 10-digit Moroccan phone number
+              </p>
               <input
                 type="tel"
                 placeholder="06XX-XXXXXX"
@@ -688,23 +791,187 @@ const TutorSignup: React.FC = () => {
       case 8:
         return (
           <div className={styles.step}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-              <h2 style={{ textAlign: 'center', marginBottom: '1rem' }}>Add Your Picture</h2>
+            <h2 style={{ textAlign: 'center', marginBottom: '2rem' }}>Add Your Picture</h2>
+            
+            <div style={{ 
+              display: 'flex', 
+              gap: '3rem', 
+              alignItems: 'flex-start',
+              maxWidth: '900px',
+              margin: '0 auto'
+            }}>
+              {/* Left Column - Instructions */}
+              <div style={{ flex: 1, maxWidth: '450px' }}>
+                {/* Photo Guidelines */}
+                <div style={{ 
+                  background: '#f8f9fa', 
+                  borderRadius: '12px', 
+                  padding: '24px', 
+                  marginBottom: '20px', 
+                  border: '1px solid #e9ecef'
+                }}>
+                  <h3 style={{ 
+                    margin: '0 0 16px 0', 
+                    fontSize: '18px', 
+                    fontWeight: '600',
+                    color: '#495057',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    📸 Photo Guidelines
+                  </h3>
+                  <div style={{ fontSize: '14px', lineHeight: '1.6', color: '#6c757d' }}>
+                    <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ fontSize: '16px', color: '#28a745' }}>✅</span>
+                      <span><strong style={{ color: '#495057' }}>Professional headshot</strong> - Clear, well-lit photo of your face</span>
+                    </div>
+                    <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ fontSize: '16px', color: '#28a745' }}>✅</span>
+                      <span><strong style={{ color: '#495057' }}>Good lighting</strong> - Natural light or well-lit indoor setting</span>
+                    </div>
+                    <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ fontSize: '16px', color: '#28a745' }}>✅</span>
+                      <span><strong style={{ color: '#495057' }}>Neutral background</strong> - Simple, uncluttered background</span>
+                    </div>
+                    <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ fontSize: '16px', color: '#28a745' }}>✅</span>
+                      <span><strong style={{ color: '#495057' }}>Friendly expression</strong> - Approachable and welcoming smile</span>
+                    </div>
+                    <div style={{ marginBottom: '12px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ fontSize: '16px', color: '#28a745' }}>✅</span>
+                      <span><strong style={{ color: '#495057' }}>High quality</strong> - Clear, not blurry or pixelated</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* What to Avoid */}
+                <div style={{ 
+                  background: '#fff5f5', 
+                  borderRadius: '12px', 
+                  padding: '20px', 
+                  marginBottom: '20px', 
+                  border: '1px solid #fed7d7'
+                }}>
+                  <h4 style={{ 
+                    margin: '0 0 12px 0', 
+                    fontSize: '16px', 
+                    fontWeight: '600',
+                    color: '#c53030',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px'
+                  }}>
+                    ⚠️ Avoid These
+                  </h4>
+                  <div style={{ fontSize: '13px', lineHeight: '1.5', color: '#e53e3e' }}>
+                    <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ fontSize: '14px' }}>❌</span>
+                      <span>Group photos, selfies with filters, dark/blurry images</span>
+                    </div>
+                    <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ fontSize: '14px' }}>❌</span>
+                      <span>Casual photos, party pictures, or inappropriate content</span>
+                    </div>
+                    <div style={{ marginBottom: '8px', display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                      <span style={{ fontSize: '14px' }}>❌</span>
+                      <span>Logos, text overlays, or heavily edited photos</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Helpful Tip */}
+                <div style={{ 
+                  background: '#f0fff4', 
+                  borderRadius: '12px', 
+                  padding: '16px', 
+                  border: '1px solid #c6f6d5'
+                }}>
+                  <p style={{ 
+                    margin: 0, 
+                    fontSize: '13px', 
+                    color: '#2f855a',
+                    fontWeight: '500',
+                    lineHeight: '1.5'
+                  }}>
+                    💡 <strong>Pro tip:</strong> A professional photo increases your chances of getting hired by 40%! 
+                    Students prefer tutors with clear, friendly profile pictures.
+                  </p>
+                </div>
+              </div>
+
+              {/* Right Column - Photo Upload */}
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
               <div
                 className={styles.avatarUpload}
                 onClick={() => avatarInputRef.current && avatarInputRef.current.click()}
-                style={{ cursor: 'pointer', marginBottom: '2rem' }}
+                  style={{ cursor: 'pointer', marginBottom: '1rem' }}
               >
-                {formData.profilePicturePreview ? (
+                  {formData.picturePreview ? (
+                    <div style={{ position: 'relative', textAlign: 'center', marginBottom: '0.5rem', width: '120px', height: '120px' }}>
                   <img
-                    src={formData.profilePicturePreview}
+                        src={formData.picturePreview}
                     alt="Profile preview"
                     className={styles.avatarImage}
-                  />
-                ) : (
-                  <div className={styles.avatarPlaceholder}>
-                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#bbb" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="8" r="4"/><path d="M16 20v-2a4 4 0 0 0-8 0v2"/></svg>
-                    <span className={styles.avatarPrompt}>Click to add a picture</span>
+                        style={{
+                          borderRadius: '50%',
+                          width: '120px',
+                          height: '120px',
+                          objectFit: 'cover',
+                          background: '#fff',
+                          display: 'block',
+                        }}
+                      />
+                      {/* Floating green check badge, inside the photo area */}
+                      <span style={{
+                        position: 'absolute',
+                        bottom: '0',
+                        right: '0',
+                        background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)',
+                        borderRadius: '50%',
+                        width: '32px',
+                        height: '32px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        boxShadow: '0 2px 8px rgba(67, 233, 123, 0.15)',
+                        border: '2px solid #fff',
+                        zIndex: 2,
+                        transform: 'translate(25%, 25%)',
+                      }}>
+                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <circle cx="10" cy="10" r="10" fill="none"/>
+                          <path d="M6 10.5L9 13.5L14 8.5" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </span>
+                    </div>
+                  ) : (
+                    <div className={styles.avatarPlaceholder} style={{
+                      border: '3px dashed #007bff',
+                      borderRadius: '50%',
+                      width: '120px',
+                      height: '120px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      background: '#f8f9fa',
+                      transition: 'all 0.3s ease',
+                      cursor: 'pointer',
+                    }}>
+                      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#007bff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/>
+                        <circle cx="12" cy="13" r="4"/>
+                      </svg>
+                      <span style={{ 
+                        fontSize: '12px', 
+                        color: '#007bff', 
+                        marginTop: '8px',
+                        textAlign: 'center',
+                        fontWeight: '500'
+                      }}>
+                        Click to upload<br/>your photo
+                      </span>
                   </div>
                 )}
                 <input
@@ -717,14 +984,17 @@ const TutorSignup: React.FC = () => {
                   aria-label="Profile picture upload"
                 />
               </div>
+                {/* Validation message under photo */}
               {validationMessage && <div className={styles.validationMessage}>{validationMessage}</div>}
-              <div className={styles.buttonRow}>
+                {/* Button row directly under photo */}
+                <div className={styles.buttonRow} style={{ marginTop: '1.5rem', justifyContent: 'center' }}>
                 {currentStep > 0 && (
                   <button type="button" onClick={prevStep} className={styles.backBtn}>Back</button>
                 )}
                 {currentStep < steps.length - 1 && (
                   <button type="button" onClick={nextStep} className={styles.nextBtn}>Next</button>
                 )}
+                </div>
               </div>
             </div>
           </div>

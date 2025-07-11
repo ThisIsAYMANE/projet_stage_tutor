@@ -79,7 +79,7 @@ const SignUpPage: React.FC = () => {
               <Link href="/find-tutors" className={styles.navLink}>
                 Find tutors
               </Link>
-              <Link href="/become-tutor" className={styles.navLink}>
+              <Link href="../tutor-auth" className={styles.navLink}>
                 Become a tutor
               </Link>
             </nav>

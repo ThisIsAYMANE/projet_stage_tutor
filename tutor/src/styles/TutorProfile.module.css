@@ -1,0 +1,1196 @@
+/* Container */
+.container {
+    min-height: 100vh;
+    background-color: #ffffff;
+  }
+  
+  /* Header Styles */
+  .header {
+    background-color: white;
+    border-bottom: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+  }
+  
+  .headerContent {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  
+  .headerFlex {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 4rem;
+  }
+  
+  .logoContainer {
+    display: flex;
+    align-items: center;
+  }
+  
+  .logoLink {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  
+  .logoIcon {
+    width: 2rem;
+    height: 2rem;
+    background-color: #ec4899;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 0.5rem;
+  }
+  
+  .logoText {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+  }
+  
+  .nav {
+    display: none;
+    gap: 2rem;
+  }
+  
+  @media (min-width: 768px) {
+    .nav {
+      display: flex;
+    }
+  }
+  
+  .navLink {
+    color: #374151;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+  }
+  
+  .navLink:hover {
+    color: #111827;
+  }
+  
+  .headerActions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .loginButton {
+    background-color: #ec4899;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    border: none;
+    cursor: pointer;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+  }
+  
+  /* Breadcrumb */
+  .breadcrumb {
+    background-color: #f9fafb;
+    padding: 1rem 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .sectionContent {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 1rem;
+  }
+  
+  .breadcrumbLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+    text-decoration: none;
+    font-size: 0.875rem;
+    transition: color 0.2s;
+  }
+  
+  .breadcrumbLink:hover {
+    color: #111827;
+  }
+  
+  /* Profile Header */
+  .profileHeader {
+    background-color: white;
+    padding: 2rem 0;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .profileGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  
+  @media (min-width: 1024px) {
+    .profileGrid {
+      grid-template-columns: 2fr 1fr;
+    }
+  }
+  
+  .profileInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  
+  @media (min-width: 768px) {
+    .profileInfo {
+      flex-direction: row;
+    }
+  }
+  
+  .profileImageSection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .profileImageWrapper {
+    position: relative;
+  }
+  
+  .profileImage {
+    width: 200px;
+    height: 200px;
+    border-radius: 1rem;
+    object-fit: cover;
+    border: 4px solid #f3f4f6;
+  }
+  
+  .onlineIndicator {
+    position: absolute;
+    bottom: 1rem;
+    right: 1rem;
+    width: 1.5rem;
+    height: 1.5rem;
+    background-color: #10b981;
+    border: 3px solid white;
+    border-radius: 50%;
+  }
+  
+  .videoPreviewButton {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #ec4899;
+    color: white;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    transition: background-color 0.2s;
+  }
+  
+  .videoPreviewButton:hover {
+    background-color: #db2777;
+  }
+  
+  .profileDetails {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .profileNameSection {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .profileName {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  
+  .countryFlag {
+    font-size: 1.5rem;
+  }
+  
+  .nativeFlag {
+    font-size: 1.25rem;
+  }
+  
+  .profileTitle {
+    font-size: 1.125rem;
+    color: #6b7280;
+    font-weight: 500;
+  }
+  
+  .profileBadges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    background-color: #fef3c7;
+    color: #d97706;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .profileStats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+  
+  .statItem {
+    text-align: center;
+  }
+  
+  .statValue {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 0.25rem;
+  }
+  
+  .starIcon {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: #fbbf24;
+    fill: currentColor;
+  }
+  
+  .statLabel {
+    font-size: 0.875rem;
+    color: #6b7280;
+  }
+  
+  .profileMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .metaItem {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+  
+  .languagesSection {
+    border-top: 1px solid #e5e7eb;
+    padding-top: 1.5rem;
+  }
+  
+  .sectionTitle {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 1rem;
+  }
+  
+  .languagesList {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .languageItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+  }
+  
+  .languageName {
+    font-weight: 500;
+    color: #111827;
+  }
+  
+  .languageLevel {
+    font-size: 0.875rem;
+    color: #6b7280;
+    background-color: #f3f4f6;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+  }
+  
+  /* Booking Card */
+  .bookingCard {
+    background-color: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    height: fit-content;
+    position: sticky;
+    top: 5rem;
+  }
+  
+  .pricingSection {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .priceItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+  }
+  
+  .priceItem:last-child {
+    margin-bottom: 0;
+  }
+  
+  .priceLabel {
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+  
+  .priceValue {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #111827;
+  }
+  
+  .bookingActions {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+  
+  .bookTrialButton {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: #ec4899;
+    color: white;
+    padding: 0.75rem 1rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .bookTrialButton:hover {
+    background-color: #db2777;
+  }
+  
+  .bookLessonButton {
+    background-color: white;
+    color: #374151;
+    padding: 0.75rem 1rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .bookLessonButton:hover {
+    background-color: #f9fafb;
+  }
+  
+  .quickActions {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .messageButton {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    background-color: white;
+    color: #374151;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .messageButton:hover {
+    background-color: #f9fafb;
+  }
+  
+  .favoriteButton {
+    background-color: white;
+    color: #6b7280;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .favoriteButton:hover {
+    background-color: #f9fafb;
+  }
+  
+  .favoriteButton.favorited {
+    color: #ef4444;
+    border-color: #ef4444;
+  }
+  
+  .shareButton {
+    background-color: white;
+    color: #6b7280;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .shareButton:hover {
+    background-color: #f9fafb;
+  }
+  
+  .specialtiesSection {
+    margin-top: 1.5rem;
+  }
+  
+  .specialtiesList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .specialtyTag {
+    background-color: #f3f4f6;
+    color: #374151;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  /* Profile Content */
+  .profileContent {
+    background-color: #f9fafb;
+    padding: 2rem 0;
+  }
+  
+  .tabNavigation {
+    display: flex;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 2rem;
+    background-color: white;
+    border-radius: 0.5rem 0.5rem 0 0;
+    overflow-x: auto;
+  }
+  
+  .tabButton {
+    background: none;
+    border: none;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    font-weight: 500;
+    color: #6b7280;
+    border-bottom: 2px solid transparent;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+  
+  .tabButton:hover {
+    color: #111827;
+  }
+  
+  .tabButton.active {
+    color: #ec4899;
+    border-bottom-color: #ec4899;
+  }
+  
+  .tabContent {
+    background-color: white;
+    border-radius: 0 0 0.5rem 0.5rem;
+    padding: 2rem;
+    min-height: 400px;
+  }
+  
+  /* About Content */
+  .aboutContent {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  
+  .aboutText {
+    line-height: 1.6;
+  }
+  
+  .aboutParagraph {
+    margin-bottom: 1rem;
+    color: #374151;
+  }
+  
+  .teachingStyle {
+    padding: 1.5rem;
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    border-left: 4px solid #ec4899;
+  }
+  
+  .subjectsSection {
+    margin-top: 1rem;
+  }
+  
+  .subjectsList {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  
+  .subjectTag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+  }
+  
+  /* Experience Content */
+  .experienceContent {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  
+  .educationSection,
+  .certificationsSection,
+  .workSection {
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .workSection {
+    border-bottom: none;
+  }
+  
+  .educationList,
+  .certificationsList,
+  .workList {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .educationItem,
+  .certificationItem,
+  .workItem {
+    padding: 1rem;
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    border-left: 4px solid #ec4899;
+  }
+  
+  .educationDegree,
+  .certificationName,
+  .workPosition {
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.25rem;
+  }
+  
+  .educationInstitution,
+  .certificationIssuer,
+  .workCompany {
+    color: #6b7280;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+  }
+  
+  .educationYear,
+  .workDuration {
+    color: #9ca3af;
+    font-size: 0.75rem;
+  }
+  
+  .workDescription {
+    color: #374151;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    line-height: 1.5;
+  }
+  
+  /* Reviews Content */
+  .reviewsContent {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  
+  .reviewsHeader {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .reviewsStats {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+  }
+  
+  .overallRating {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .ratingNumber {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #111827;
+  }
+  
+  .ratingStars {
+    display: flex;
+    gap: 0.25rem;
+  }
+  
+  .starIcon {
+    width: 1.25rem;
+    height: 1.25rem;
+    color: #d1d5db;
+  }
+  
+  .starIcon.filled {
+    color: #fbbf24;
+    fill: currentColor;
+  }
+  
+  .reviewCount {
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+  
+  .reviewsList {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .reviewCard {
+    background-color: #f9fafb;
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+    border-left: 4px solid #ec4899;
+  }
+  
+  .reviewHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+  }
+  
+  .reviewerInfo {
+    display: flex;
+    gap: 1rem;
+  }
+  
+  .reviewerAvatar {
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background-color: #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+  }
+  
+  .reviewerFlag {
+    font-size: 1.5rem;
+  }
+  
+  .reviewerName {
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.25rem;
+  }
+  
+  .reviewMeta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  
+  .reviewRating {
+    display: flex;
+    gap: 0.125rem;
+  }
+  
+  .reviewDate {
+    color: #6b7280;
+    font-size: 0.875rem;
+  }
+  
+  .lessonType {
+    background-color: #dbeafe;
+    color: #1d4ed8;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .reviewComment {
+    color: #374151;
+    line-height: 1.6;
+    margin-bottom: 1rem;
+  }
+  
+  .reviewFooter {
+    display: flex;
+    justify-content: flex-end;
+  }
+  
+  .helpfulButton {
+    background: none;
+    border: 1px solid #d1d5db;
+    color: #6b7280;
+    padding: 0.5rem 1rem;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: all 0.2s;
+  }
+  
+  .helpfulButton:hover {
+    background-color: #f3f4f6;
+  }
+  
+  .helpfulButton.active {
+    background-color: #ec4899;
+    color: white;
+    border-color: #ec4899;
+  }
+  
+  /* Availability Content */
+  .availabilityContent {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  
+  .timezoneInfo {
+    padding: 1rem;
+    background-color: #fef3c7;
+    border-radius: 0.5rem;
+    border-left: 4px solid #f59e0b;
+  }
+  
+  .timezoneNote {
+    color: #92400e;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+  }
+  
+  .scheduleGrid {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1rem;
+  }
+  
+  @media (min-width: 768px) {
+    .scheduleGrid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .scheduleGrid {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+  
+  .scheduleDay {
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    border-left: 4px solid #ec4899;
+  }
+  
+  .dayName {
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.75rem;
+    text-transform: capitalize;
+  }
+  
+  .timeSlots {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  
+  .timeSlot {
+    background-color: white;
+    color: #374151;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+    border: 1px solid #d1d5db;
+  }
+  
+  .noSlots {
+    color: #9ca3af;
+    font-style: italic;
+    font-size: 0.875rem;
+  }
+  
+  /* Modal Styles */
+  .modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  
+  .bookingModal {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-width: 4xl;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+  
+  .videoModal {
+    background-color: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-width: 2xl;
+    width: 100%;
+  }
+  
+  .modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+  }
+  
+  .modalTitle {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #111827;
+  }
+  
+  .closeButton {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #6b7280;
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    transition: background-color 0.2s;
+  }
+  
+  .closeButton:hover {
+    background-color: #f3f4f6;
+  }
+  
+  .modalContent {
+    padding: 1.5rem;
+  }
+  
+  .bookingGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+  }
+  
+  @media (min-width: 768px) {
+    .bookingGrid {
+      grid-template-columns: 1fr 1fr;
+    }
+  }
+  
+  .bookingSection {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .dateGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .dateButton {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0.75rem 0.5rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .dateButton:hover:not(.disabled) {
+    border-color: #ec4899;
+    background-color: #fdf2f8;
+  }
+  
+  .dateButton.selected {
+    background-color: #ec4899;
+    color: white;
+    border-color: #ec4899;
+  }
+  
+  .dateButton.disabled {
+    background-color: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+  }
+  
+  .dayName {
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+  
+  .dayNumber {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  
+  .timeGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.5rem;
+  }
+  
+  .timeButton {
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    background-color: white;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+  }
+  
+  .timeButton:hover {
+    border-color: #ec4899;
+    background-color: #fdf2f8;
+  }
+  
+  .timeButton.selected {
+    background-color: #ec4899;
+    color: white;
+    border-color: #ec4899;
+  }
+  
+  .selectDateFirst {
+    color: #9ca3af;
+    font-style: italic;
+    text-align: center;
+    padding: 2rem;
+  }
+  
+  .messageTextarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #d1d5db;
+    border-radius: 0.5rem;
+    resize: vertical;
+    font-family: inherit;
+  }
+  
+  .lessonSummary {
+    background-color: #f9fafb;
+    border-radius: 0.5rem;
+    padding: 1.5rem;
+    border-left: 4px solid #ec4899;
+  }
+  
+  .summaryCard {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .summaryRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  
+  .price {
+    font-weight: 700;
+    color: #ec4899;
+    font-size: 1.125rem;
+  }
+  
+  .modalFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem;
+    border-top: 1px solid #e5e7eb;
+    gap: 1rem;
+  }
+  
+  .cancelButton {
+    background: none;
+    border: 1px solid #d1d5db;
+    color: #6b7280;
+    padding: 0.75rem 1.5rem;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  
+  .cancelButton:hover {
+    background-color: #f3f4f6;
+  }
+  
+  .bookButton {
+    background-color: #ec4899;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .bookButton:hover:not(.disabled) {
+    background-color: #db2777;
+  }
+  
+  .bookButton.disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+  }
+  
+  .videoContainer {
+    padding: 1.5rem;
+  }
+  
+  .videoPlaceholder {
+    aspect-ratio: 16 / 9;
+    background-color: #f3f4f6;
+    border-radius: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+  }
+  
+  /* Mobile Responsive */
+  @media (max-width: 767px) {
+    .nav {
+      display: none;
+    }
+  
+    .profileGrid {
+      grid-template-columns: 1fr;
+    }
+  
+    .profileInfo {
+      flex-direction: column;
+    }
+  
+    .profileStats {
+      grid-template-columns: repeat(1, 1fr);
+    }
+  
+    .bookingCard {
+      position: static;
+    }
+  
+    .tabNavigation {
+      border-radius: 0;
+    }
+  
+    .tabContent {
+      border-radius: 0;
+      padding: 1rem;
+    }
+  
+    .bookingGrid {
+      grid-template-columns: 1fr;
+    }
+  
+    .dateGrid {
+      grid-template-columns: repeat(4, 1fr);
+    }
+  
+    .timeGrid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  
+    .modalFooter {
+      flex-direction: column;
+    }
+  
+    .cancelButton,
+    .bookButton {
+      width: 100%;
+    }
+  
+    .scheduleGrid {
+      grid-template-columns: 1fr;
+    }
+  }
+  

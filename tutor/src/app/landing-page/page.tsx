@@ -377,10 +377,10 @@ function FeaturedTutors() {
         </div>
 
         <div className={`${styles.textCenter} ${styles.mt12}`}>
-          <button className={`${styles.button} ${styles.buttonSecondary} ${styles.buttonLarge}`}>
+          <Link href="/search" className={`${styles.button} ${styles.buttonSecondary} ${styles.buttonLarge}`}>
             View All Tutors
             <ArrowRight className="w-5 h-5 ml-2" />
-          </button>
+          </Link>
         </div>
       </div>
     </motion.section>

@@ -80,6 +80,7 @@ export function ProfileSettingsPage() {
                 onChange={handleImageUpload}
                 className="hidden"
                 id="profile-image-upload"
+                title="Upload profile image"
               />
               <label
                 htmlFor="profile-image-upload"

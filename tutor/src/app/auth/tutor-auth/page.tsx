@@ -35,7 +35,7 @@ const TutorSignup = () => {
     subjects: [],
     title: '',
     description: '',
-    location: 'Safi, Maroc',
+    location: '',
     teachingMethods: [],
     languages: [],
     hourlyRate: '',
@@ -315,15 +315,49 @@ const TutorSignup = () => {
       totalReviews: 0,
     };
     
+    console.log('About to send tutorProfile:', tutorProfile);
+    
     const res = await fetch('/api/tutor-register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(tutorProfile),
     });
     
+    console.log('Registration response status:', res.status);
+    const registrationData = await res.json();
+    console.log('Registration response data:', registrationData);
+    
     if (res.ok) {
-      window.location.href = '/dashboard';
+      console.log('Registration successful, saving fallback data...');
+      // Save the just-submitted tutor profile as a fallback
+      localStorage.setItem('tutorProfileFallback', JSON.stringify(tutorProfile));
+      console.log('Fallback data saved to localStorage');
+      
+      // Automatically log in the user
+      console.log('Attempting automatic login...');
+      const loginRes = await fetch('/api/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: formData.email, password: formData.password }),
+      });
+      
+      console.log('Login response status:', loginRes.status);
+      const loginData = await loginRes.json();
+      console.log('Login response data:', loginData);
+      
+      if (loginRes.ok && loginData.user) {
+        console.log('Login successful, saving user data...');
+        localStorage.setItem('user', JSON.stringify(loginData.user));
+        console.log('User data saved to localStorage:', localStorage.getItem('user'));
+        console.log('Redirecting to tutor-dash...');
+        window.location.href = '/tutor-dash';
+      } else {
+        console.log('Login failed, redirecting to manual login...');
+        alert('Signup succeeded but automatic login failed. Please log in manually.');
+        window.location.href = '/auth/login';
+      }
     } else {
+      console.log('Registration failed');
       alert('Failed to register tutor profile');
     }
   };

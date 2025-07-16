@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import * as bcrypt from 'bcryptjs';
 
 // Initialize Firebase client SDK
@@ -28,20 +28,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Find user by email
+    // Generate userId from email (same as in registration)
+    const userId = email.replace(/[^a-zA-Z0-9]/g, '');
+
+    // First, try to find user in the users collection
     const usersRef = collection(db, "users");
     const q = query(usersRef, where("email", "==", email));
     const querySnapshot = await getDocs(q);
 
-    if (querySnapshot.empty) {
+    let userData = null;
+    let userDoc = null;
+
+    if (!querySnapshot.empty) {
+      // Regular user found
+      userDoc = querySnapshot.docs[0];
+      userData = userDoc.data();
+    } else {
+      // Check for tutor profile
+      const tutorProfileRef = doc(db, 'users', userId, 'tutorProfile', 'profile');
+      const tutorProfileSnap = await getDoc(tutorProfileRef);
+      
+      if (tutorProfileSnap.exists()) {
+        // Tutor profile found
+        userData = tutorProfileSnap.data();
+        userDoc = { id: userId }; // Create a mock doc for consistency
+      }
+    }
+
+    if (!userData) {
       return NextResponse.json(
         { error: "Invalid email or password" },
         { status: 401 }
       );
     }
-
-    const userDoc = querySnapshot.docs[0];
-    const userData = userDoc.data();
 
     // Verify password
     const isPasswordValid = await bcrypt.compare(password, userData.password);

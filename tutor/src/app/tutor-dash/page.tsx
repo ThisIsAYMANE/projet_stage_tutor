@@ -1,7 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from '../../styles/TutorDash.module.css';
+import { db } from '../../../firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface Message {
   id: string;
@@ -19,18 +21,46 @@ interface Conversation {
   unreadCount: number;
 }
 
+interface TutorProfile {
+  name: string;
+  email: string;
+  phone: string;
+  bio: string;
+  subjects: string[];
+  title: string;
+  location: string;
+  teachingMethods: string[];
+  languages: string[];
+  hourlyRate: number;
+  picture: string;
+  isAvailable: boolean;
+  averageRating: number;
+  totalReviews: number;
+  experience: string;
+  isVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export default function TutorDashboard() {
   const [activeView, setActiveView] = useState<'messages' | 'announcement' | 'profile'>('messages');
   const [activeConversation, setActiveConversation] = useState<string>('sarah');
   const [messageInput, setMessageInput] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   // Profile form states
   const [profileData, setProfileData] = useState({
-    fullName: 'John Doe',
-    email: 'john.doe@tutorconnect.com',
-    phone: '+1 (555) 123-4567',
-    bio: 'Experienced mathematics tutor with 5+ years of teaching experience. Specializing in algebra, calculus, and statistics.'
+    fullName: '',
+    email: '',
+    phone: '',
+    bio: ''
   });
+  
+  // Additional tutor profile data
+  const [tutorProfile, setTutorProfile] = useState<TutorProfile | null>(null);
+  
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
@@ -102,6 +132,65 @@ export default function TutorDashboard() {
   const activeStudent = conversations.find(c => c.id === activeConversation);
   const activeMessages = messages[activeConversation] || [];
 
+  useEffect(() => {
+    const fetchTutorProfile = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+        // Get user from localStorage
+        const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+        if (!userStr) {
+          setError('No user data found. Please log in again.');
+          setLoading(false);
+          return;
+        }
+        const user = JSON.parse(userStr);
+        if (!user.email) {
+          setError('Invalid user data. Please log in again.');
+          setLoading(false);
+          return;
+        }
+        // Generate userId as in registration
+        const userId = user.email.replace(/[^a-zA-Z0-9]/g, '');
+        // Fetch tutor profile from Firestore
+        const profileRef = doc(db, 'users', userId, 'tutorProfile', 'profile');
+        const profileSnap = await getDoc(profileRef);
+        if (profileSnap.exists()) {
+          const data = profileSnap.data() as TutorProfile;
+          setTutorProfile(data);
+          setProfileData({
+            fullName: data.name || '',
+            email: data.email || '',
+            phone: data.phone || '',
+            bio: data.bio || '',
+          });
+        } else {
+          // Try fallback from localStorage
+          const fallbackStr = typeof window !== 'undefined' ? localStorage.getItem('tutorProfileFallback') : null;
+          if (fallbackStr) {
+            const fallbackData = JSON.parse(fallbackStr);
+            setTutorProfile(fallbackData);
+            setProfileData({
+              fullName: fallbackData.name || '',
+              email: fallbackData.email || '',
+              phone: fallbackData.phone || '',
+              bio: fallbackData.bio || '',
+            });
+            setError(null);
+          } else {
+            setError('Tutor profile not found. Please complete your profile setup.');
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching tutor profile:', err);
+        setError('Failed to load profile data. Please try again.');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTutorProfile();
+  }, []);
+
   const handleSendMessage = () => {
     if (messageInput.trim()) {
       // Here you would typically send the message to your backend
@@ -146,9 +235,53 @@ export default function TutorDashboard() {
     // Save as draft logic
   };
 
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <div>Loading your profile...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.container}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
+          <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>
+          <button onClick={() => window.location.href = '/auth/login'}>Go to Login</button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={styles.container}>
-      {/* Sidebar */}
+      {/* Responsive Header for mobile/tablet */}
+      <div className={styles.responsiveHeader}>
+        <div className={styles.headerContent}>
+          <div className={styles.logoText}>TutorConnect</div>
+          <button
+            className={styles.hamburger}
+            aria-label="Open menu"
+            onClick={() => setMenuOpen((open) => !open)}
+          >
+            <span className={styles.hamburgerBar}></span>
+            <span className={styles.hamburgerBar}></span>
+            <span className={styles.hamburgerBar}></span>
+          </button>
+        </div>
+        {menuOpen && (
+          <div className={styles.dropdownMenu}>
+            <div className={styles.dropdownItem} onClick={() => { setActiveView('messages'); setMenuOpen(false); }}>Messages</div>
+            <div className={styles.dropdownItem} onClick={() => { setActiveView('announcement'); setMenuOpen(false); }}>Add Announcement</div>
+            <div className={styles.dropdownItem} onClick={() => { setActiveView('profile'); setMenuOpen(false); }}>Edit Profile</div>
+            <div className={styles.dropdownItem}>Logout</div>
+          </div>
+        )}
+      </div>
+      {/* Sidebar (hidden on mobile/tablet) */}
       <div className={styles.sidebar}>
         <div className={styles.header}>
           <div className={styles.logo}>
@@ -187,17 +320,31 @@ export default function TutorDashboard() {
           </div>
         </nav>
         <div className={styles.logout}>
-          <div className={styles.navItem}>
+          <div className={styles.navItem} onClick={() => {
+            localStorage.clear();
+            window.location.href = '/landing-page';
+          }}>
             <span className={styles.navIcon}>↗</span>
             Logout
           </div>
         </div>
         <div className={styles.userInfo}>
           <div className={styles.userAvatar}>
+            {tutorProfile?.picture ? (
+              <img 
+                src={tutorProfile.picture} 
+                alt="Profile" 
+                style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
+              />
+            ) : (
+              <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                {tutorProfile?.name ? tutorProfile.name.split(' ').map(n => n[0]).join('') : 'T'}
+              </div>
+            )}
             <div className={styles.onlineIndicator}></div>
           </div>
           <div className={styles.userDetails}>
-            <div className={styles.userName}>John Doe</div>
+            <div className={styles.userName}>{tutorProfile?.name || 'Tutor'}</div>
             <div className={styles.userRole}>Tutor</div>
           </div>
         </div>
@@ -313,18 +460,59 @@ export default function TutorDashboard() {
               <h1 className={styles.sectionTitle}>Profile Settings</h1>
               <p className={styles.profileSubtitle}>Manage your account information and preferences</p>
               <div className={styles.profilePictureSection}>
-                <div className={styles.profilePicture}>
-                  <div className={styles.profileAvatar}>
-                    JD
-                    <div className={styles.cameraIcon}>📷</div>
-                  </div>
+                <div className={styles.profileAvatar}>
+                  {tutorProfile?.picture ? (
+                    <img 
+                      src={tutorProfile.picture} 
+                      alt="Profile" 
+                      className={styles.profileAvatarImg}
+                    />
+                  ) : (
+                    <span className={styles.profileAvatarFallback}>
+                      {tutorProfile?.name ? tutorProfile.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'T'}
+                    </span>
+                  )}
                 </div>
                 <div className={styles.profileInfo}>
-                  <h3 className={styles.profileName}>John Doe</h3>
+                  <h3 className={styles.profileName}>{tutorProfile?.name || 'Tutor Name'}</h3>
                   <p className={styles.profileRole}>Tutor</p>
+                  {tutorProfile?.isVerified && (
+                    <span style={{ color: '#4caf50', fontSize: '0.8rem' }}>✓ Verified</span>
+                  )}
                 </div>
               </div>
             </div>
+            
+            {/* Profile Overview */}
+            <div className={styles.sectionCard}>
+              <h2 className={styles.sectionTitle}>Profile Overview</h2>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+                <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
+                  <strong>Subjects:</strong> {tutorProfile?.subjects?.join(', ') || 'Not specified'}
+                </div>
+                <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
+                  <strong>Languages:</strong> {tutorProfile?.languages?.join(', ') || 'Not specified'}
+                </div>
+                <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
+                  <strong>Location:</strong> {tutorProfile?.location || 'Not specified'}
+                </div>
+                <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
+                  <strong>Hourly Rate:</strong> {tutorProfile?.hourlyRate ? `${tutorProfile.hourlyRate} MAD` : 'Not specified'}
+                </div>
+                <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
+                  <strong>Teaching Methods:</strong> {tutorProfile?.teachingMethods?.join(', ') || 'Not specified'}
+                </div>
+                <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
+                  <strong>Rating:</strong> {tutorProfile?.averageRating ? `${tutorProfile.averageRating}/5 (${tutorProfile.totalReviews} reviews)` : 'No reviews yet'}
+                </div>
+              </div>
+              {tutorProfile?.title && (
+                <div style={{ marginBottom: '1rem' }}>
+                  <strong>Profile Title:</strong> {tutorProfile.title}
+                </div>
+              )}
+            </div>
+            
             <div className={styles.sectionCard}>
               <h2 className={styles.sectionTitle}>Personal Information</h2>
               <div className={styles.formGrid}>

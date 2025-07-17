@@ -44,14 +44,12 @@ interface PriceRangeSliderProps {
 
 interface Filters {
   subject: string
-  priceRange: [number, number]
-  availability: string[]
-  specialties: string[]
-  alsoSpeaks: string[]
-  countries: string[]
-  certifications: string[]
+  hourlyRate: [number, number]
   experience: string
-  lessonTypes: string[]
+  isVerified: boolean
+  isAvailable: boolean
+  averageRating: number
+  totalReviews: number
   sortBy: string
 }
 
@@ -254,62 +252,6 @@ function PriceRangeSlider({ min, max, value, onChange, label }: PriceRangeSlider
 
 // Advanced Filter Panel Component
 function AdvancedFilterPanel({ isOpen, onClose, filters, onFilterChange }: AdvancedFilterPanelProps) {
-  const availabilityOptions: Option[] = [
-    { value: "morning", label: "Morning (6AM-12PM)", count: 1247 },
-    { value: "afternoon", label: "Afternoon (12PM-6PM)", count: 2156 },
-    { value: "evening", label: "Evening (6PM-10PM)", count: 1893 },
-    { value: "night", label: "Night (10PM-6AM)", count: 567 },
-    { value: "weekends", label: "Weekends", count: 1432 },
-    { value: "flexible", label: "Flexible schedule", count: 892 },
-  ]
-
-  const specialtyOptions: Option[] = [
-    { value: "conversational", label: "Conversational English", count: 3421 },
-    { value: "business", label: "Business English", count: 2156 },
-    { value: "ielts", label: "IELTS Preparation", count: 1789 },
-    { value: "toefl", label: "TOEFL Preparation", count: 1234 },
-    { value: "grammar", label: "Grammar", count: 2987 },
-    { value: "pronunciation", label: "Pronunciation", count: 1876 },
-    { value: "writing", label: "Academic Writing", count: 1543 },
-    { value: "interview", label: "Job Interview Prep", count: 987 },
-    { value: "kids", label: "English for Kids", count: 1654 },
-    { value: "beginners", label: "English for Beginners", count: 2341 },
-  ]
-
-  const languageOptions: Option[] = [
-    { value: "spanish", label: "Spanish", count: 1234 },
-    { value: "french", label: "French", count: 987 },
-    { value: "german", label: "German", count: 654 },
-    { value: "chinese", label: "Chinese (Mandarin)", count: 543 },
-    { value: "japanese", label: "Japanese", count: 432 },
-    { value: "arabic", label: "Arabic", count: 321 },
-    { value: "portuguese", label: "Portuguese", count: 298 },
-    { value: "italian", label: "Italian", count: 267 },
-    { value: "russian", label: "Russian", count: 234 },
-    { value: "korean", label: "Korean", count: 198 },
-  ]
-
-  const countryOptions: Option[] = [
-    { value: "us", label: "United States", count: 5432 },
-    { value: "uk", label: "United Kingdom", count: 4321 },
-    { value: "canada", label: "Canada", count: 2156 },
-    { value: "australia", label: "Australia", count: 1876 },
-    { value: "south-africa", label: "South Africa", count: 987 },
-    { value: "ireland", label: "Ireland", count: 654 },
-    { value: "new-zealand", label: "New Zealand", count: 432 },
-    { value: "philippines", label: "Philippines", count: 1234 },
-    { value: "india", label: "India", count: 2341 },
-    { value: "nigeria", label: "Nigeria", count: 876 },
-  ]
-
-  const certificationOptions: Option[] = [
-    { value: "tefl", label: "TEFL Certified", count: 2156 },
-    { value: "tesol", label: "TESOL Certified", count: 1876 },
-    { value: "celta", label: "CELTA Certified", count: 987 },
-    { value: "delta", label: "DELTA Certified", count: 234 },
-    { value: "cambridge", label: "Cambridge Certified", count: 654 },
-    { value: "ielts-examiner", label: "IELTS Examiner", count: 123 },
-  ]
 
   if (!isOpen) return null
 
@@ -325,70 +267,45 @@ function AdvancedFilterPanel({ isOpen, onClose, filters, onFilterChange }: Advan
 
         <div className={styles.advancedFilterContent}>
           <div className={styles.filterGrid}>
-            {/* Price Range */}
+            {/* Hourly Rate */}
             <div className={styles.filterSection}>
               <PriceRangeSlider
                 label="Price per lesson"
                 min={3}
                 max={100}
-                value={filters.priceRange}
-                onChange={(value: [number, number]) => onFilterChange("priceRange", value)}
+                value={filters.hourlyRate}
+                onChange={(value: [number, number]) => onFilterChange("hourlyRate", value)}
               />
             </div>
 
             {/* Availability */}
             <div className={styles.filterSection}>
-              <MultiSelect
-                label="Availability"
-                options={availabilityOptions}
-                selected={filters.availability}
-                onChange={(value: string[]) => onFilterChange("availability", value)}
-                placeholder="Any time"
-              />
+              <label className={styles.filterLabel}>Availability</label>
+              <div className={styles.checkboxGroup}>
+                <label className={styles.checkboxOption}>
+                  <input
+                    type="checkbox"
+                    checked={filters.isAvailable}
+                    onChange={(e) => onFilterChange("isAvailable", e.target.checked)}
+                  />
+                  <span>Available now</span>
+                </label>
+              </div>
             </div>
 
-            {/* Specialties */}
+            {/* Verification Status */}
             <div className={styles.filterSection}>
-              <MultiSelect
-                label="Specialties"
-                options={specialtyOptions}
-                selected={filters.specialties}
-                onChange={(value: string[]) => onFilterChange("specialties", value)}
-                placeholder="All specialties"
-              />
-            </div>
-
-            {/* Also Speaks */}
-            <div className={styles.filterSection}>
-              <MultiSelect
-                label="Also speaks"
-                options={languageOptions}
-                selected={filters.alsoSpeaks}
-                onChange={(value: string[]) => onFilterChange("alsoSpeaks", value)}
-                placeholder="Any language"
-              />
-            </div>
-
-            {/* Country of Birth */}
-            <div className={styles.filterSection}>
-              <MultiSelect
-                label="Country of birth"
-                options={countryOptions}
-                selected={filters.countries}
-                onChange={(value: string[]) => onFilterChange("countries", value)}
-                placeholder="Any country"
-              />
-            </div>
-
-            {/* Certifications */}
-            <div className={styles.filterSection}>
-              <MultiSelect
-                label="Certifications"
-                options={certificationOptions}
-                selected={filters.certifications}
-                onChange={(value: string[]) => onFilterChange("certifications", value)}
-                placeholder="Any certification"
-              />
+              <label className={styles.filterLabel}>Verification</label>
+              <div className={styles.checkboxGroup}>
+                <label className={styles.checkboxOption}>
+                  <input
+                    type="checkbox"
+                    checked={filters.isVerified}
+                    onChange={(e) => onFilterChange("isVerified", e.target.checked)}
+                  />
+                  <span>Verified tutors only</span>
+                </label>
+              </div>
             </div>
 
             {/* Experience Level */}
@@ -438,35 +355,96 @@ function AdvancedFilterPanel({ isOpen, onClose, filters, onFilterChange }: Advan
               </div>
             </div>
 
-            {/* Lesson Type */}
+            {/* Average Rating */}
             <div className={styles.filterSection}>
-              <label className={styles.filterLabel}>Lesson Type</label>
-              <div className={styles.checkboxGroup}>
-                <label className={styles.checkboxOption}>
+              <label className={styles.filterLabel}>Minimum Rating</label>
+              <div className={styles.ratingOptions}>
+                <label className={styles.radioOption}>
                   <input
-                    type="checkbox"
-                    checked={filters.lessonTypes.includes("individual")}
-                    onChange={(e) => {
-                      const newTypes = e.target.checked
-                        ? [...filters.lessonTypes, "individual"]
-                        : filters.lessonTypes.filter((t: string) => t !== "individual")
-                      onFilterChange("lessonTypes", newTypes)
-                    }}
+                    type="radio"
+                    name="rating"
+                    value={0}
+                    checked={filters.averageRating === 0}
+                    onChange={(e) => onFilterChange("averageRating", Number(e.target.value))}
                   />
-                  <span>Individual lessons</span>
+                  <span>Any rating</span>
                 </label>
-                <label className={styles.checkboxOption}>
+                <label className={styles.radioOption}>
                   <input
-                    type="checkbox"
-                    checked={filters.lessonTypes.includes("group")}
-                    onChange={(e) => {
-                      const newTypes = e.target.checked
-                        ? [...filters.lessonTypes, "group"]
-                        : filters.lessonTypes.filter((t: string) => t !== "group")
-                      onFilterChange("lessonTypes", newTypes)
-                    }}
+                    type="radio"
+                    name="rating"
+                    value={4}
+                    checked={filters.averageRating === 4}
+                    onChange={(e) => onFilterChange("averageRating", Number(e.target.value))}
                   />
-                  <span>Group lessons</span>
+                  <span>4+ stars</span>
+                </label>
+                <label className={styles.radioOption}>
+                  <input
+                    type="radio"
+                    name="rating"
+                    value={4.5}
+                    checked={filters.averageRating === 4.5}
+                    onChange={(e) => onFilterChange("averageRating", Number(e.target.value))}
+                  />
+                  <span>4.5+ stars</span>
+                </label>
+                <label className={styles.radioOption}>
+                  <input
+                    type="radio"
+                    name="rating"
+                    value={5}
+                    checked={filters.averageRating === 5}
+                    onChange={(e) => onFilterChange("averageRating", Number(e.target.value))}
+                  />
+                  <span>5 stars only</span>
+                </label>
+              </div>
+            </div>
+
+            {/* Total Reviews */}
+            <div className={styles.filterSection}>
+              <label className={styles.filterLabel}>Minimum Reviews</label>
+              <div className={styles.reviewOptions}>
+                <label className={styles.radioOption}>
+                  <input
+                    type="radio"
+                    name="reviews"
+                    value={0}
+                    checked={filters.totalReviews === 0}
+                    onChange={(e) => onFilterChange("totalReviews", Number(e.target.value))}
+                  />
+                  <span>Any number</span>
+                </label>
+                <label className={styles.radioOption}>
+                  <input
+                    type="radio"
+                    name="reviews"
+                    value={10}
+                    checked={filters.totalReviews === 10}
+                    onChange={(e) => onFilterChange("totalReviews", Number(e.target.value))}
+                  />
+                  <span>10+ reviews</span>
+                </label>
+                <label className={styles.radioOption}>
+                  <input
+                    type="radio"
+                    name="reviews"
+                    value={50}
+                    checked={filters.totalReviews === 50}
+                    onChange={(e) => onFilterChange("totalReviews", Number(e.target.value))}
+                  />
+                  <span>50+ reviews</span>
+                </label>
+                <label className={styles.radioOption}>
+                  <input
+                    type="radio"
+                    name="reviews"
+                    value={100}
+                    checked={filters.totalReviews === 100}
+                    onChange={(e) => onFilterChange("totalReviews", Number(e.target.value))}
+                  />
+                  <span>100+ reviews</span>
                 </label>
               </div>
             </div>
@@ -477,14 +455,12 @@ function AdvancedFilterPanel({ isOpen, onClose, filters, onFilterChange }: Advan
           <button
             onClick={() => {
               // Clear all filters
-              onFilterChange("priceRange", [3, 100])
-              onFilterChange("availability", [])
-              onFilterChange("specialties", [])
-              onFilterChange("alsoSpeaks", [])
-              onFilterChange("countries", [])
-              onFilterChange("certifications", [])
+              onFilterChange("hourlyRate", [3, 100])
+              onFilterChange("isAvailable", false)
+              onFilterChange("isVerified", false)
               onFilterChange("experience", "any")
-              onFilterChange("lessonTypes", [])
+              onFilterChange("averageRating", 0)
+              onFilterChange("totalReviews", 0)
             }}
             className={styles.clearAllButton}
           >
@@ -517,9 +493,7 @@ function Header() {
             <Link href="/search" className={`${styles.navLink} ${styles.activeNavLink}`}>
               Find tutors
             </Link>
-            <Link href="#" className={styles.navLink}>
-              Corporate language training
-            </Link>
+            
             <Link href="/#become-tutor" className={styles.navLink}>
               Become a tutor
             </Link>
@@ -534,7 +508,7 @@ function Header() {
             <button className={styles.helpButton} aria-label="Help">
               <HelpCircle className="w-5 h-5" />
             </button>
-            <Link href="/login" className={styles.loginButton}>
+            <Link href="/auth/login" className={styles.loginButton}>
               Log In
             </Link>
           </div>
@@ -578,14 +552,12 @@ function FilterBar({ filters, onFilterChange, searchQuery, onSearchChange, onOpe
 
   const getActiveFiltersCount = () => {
     let count = 0
-    if (filters.availability.length > 0) count++
-    if (filters.specialties.length > 0) count++
-    if (filters.alsoSpeaks.length > 0) count++
-    if (filters.countries.length > 0) count++
-    if (filters.certifications.length > 0) count++
+    if (filters.isAvailable) count++
+    if (filters.isVerified) count++
     if (filters.experience !== "any") count++
-    if (filters.lessonTypes.length > 0) count++
-    if (filters.priceRange[0] !== 3 || filters.priceRange[1] !== 100) count++
+    if (filters.averageRating > 0) count++
+    if (filters.totalReviews > 0) count++
+    if (filters.hourlyRate[0] !== 3 || filters.hourlyRate[1] !== 100) count++
     return count
   }
 
@@ -624,10 +596,10 @@ function FilterBar({ filters, onFilterChange, searchQuery, onSearchChange, onOpe
           <div className={styles.filterGroup}>
             <label className={styles.filterLabel}>Price per lesson</label>
             <select
-              value={`${filters.priceRange[0]}-${filters.priceRange[1]}`}
+              value={`${filters.hourlyRate[0]}-${filters.hourlyRate[1]}`}
               onChange={(e) => {
                 const range = quickPriceRanges.find((r) => `${r.value[0]}-${r.value[1]}` === e.target.value)
-                if (range) onFilterChange("priceRange", range.value)
+                if (range) onFilterChange("hourlyRate", range.value)
               }}
               className={styles.filterSelect}
               aria-label="Select price range"
@@ -642,18 +614,17 @@ function FilterBar({ filters, onFilterChange, searchQuery, onSearchChange, onOpe
 
           <div className={styles.filterGroup}>
             <label className={styles.filterLabel}>Availability</label>
-            <button
-              onClick={onOpenAdvancedFilters}
-              className={`${styles.filterSelect} ${styles.filterButton} ${filters.availability.length > 0 ? styles.hasSelection : ""}`}
+            <select
+              value={filters.isAvailable ? "available" : "any"}
+              onChange={(e) => {
+                onFilterChange("isAvailable", e.target.value === "available")
+              }}
+              className={styles.filterSelect}
               aria-label="Select availability"
             >
-              {filters.availability.length === 0
-                ? "Any time"
-                : filters.availability.length === 1
-                  ? filters.availability[0]
-                  : `${filters.availability.length} selected`}
-              <ChevronDown className="w-4 h-4 ml-auto" />
-            </button>
+              <option value="any">Any time</option>
+              <option value="available">Available now</option>
+            </select>
           </div>
 
           <div className={styles.filterGroup}>
@@ -671,18 +642,21 @@ function FilterBar({ filters, onFilterChange, searchQuery, onSearchChange, onOpe
 
         {/* Secondary Filter Row */}
         <div className={styles.secondaryFilters}>
-          <select
-            value={filters.sortBy}
-            onChange={(e) => onFilterChange("sortBy", e.target.value)}
-            className={styles.secondarySelect}
-            aria-label="Sort results by"
-          >
-            {sortOptions.map((option) => (
-              <option key={option} value={option}>
-                Sort by: {option}
-              </option>
-            ))}
-          </select>
+          <div className={styles.sortWrapper}>
+            <span className={styles.sortLabel}>Sort by:</span>
+            <select
+              value={filters.sortBy}
+              onChange={(e) => onFilterChange("sortBy", e.target.value)}
+              className={styles.secondarySelect}
+              aria-label="Sort results by"
+            >
+              {sortOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
 
           <div className={styles.searchWrapper}>
             <Search className={styles.searchIcon} />
@@ -702,64 +676,88 @@ function FilterBar({ filters, onFilterChange, searchQuery, onSearchChange, onOpe
           <div className={styles.activeFilters}>
             <span className={styles.activeFiltersLabel}>Active filters:</span>
             <div className={styles.activeFilterTags}>
-              {filters.priceRange[0] !== 3 || filters.priceRange[1] !== 100 ? (
+              {filters.hourlyRate[0] !== 3 || filters.hourlyRate[1] !== 100 ? (
                 <span className={styles.activeFilterTag}>
-                  ${filters.priceRange[0]} - ${filters.priceRange[1]}
-                  <button onClick={() => onFilterChange("priceRange", [3, 100])} aria-label="Remove price filter">
+                  ${filters.hourlyRate[0]} - ${filters.hourlyRate[1]}
+                  <button onClick={() => onFilterChange("hourlyRate", [3, 100])} aria-label="Remove price filter">
                     <X className="w-3 h-3" />
                   </button>
                 </span>
               ) : null}
 
-              {filters.availability.map((item: string) => (
-                <span key={item} className={styles.activeFilterTag}>
-                  {item}
+              {filters.isAvailable && (
+                <span className={styles.activeFilterTag}>
+                  Available now
                   <button
-                    onClick={() =>
-                      onFilterChange(
-                        "availability",
-                        filters.availability.filter((a: string) => a !== item),
-                      )
-                    }
-                    aria-label={`Remove ${item} filter`}
+                    onClick={() => onFilterChange("isAvailable", false)}
+                    aria-label="Remove availability filter"
                   >
                     <X className="w-3 h-3" />
                   </button>
                 </span>
-              ))}
+              )}
 
-              {filters.specialties.map((item: string) => (
-                <span key={item} className={styles.activeFilterTag}>
-                  {item}
+              {filters.isVerified && (
+                <span className={styles.activeFilterTag}>
+                  Verified only
                   <button
-                    onClick={() =>
-                      onFilterChange(
-                        "specialties",
-                        filters.specialties.filter((s: string) => s !== item),
-                      )
-                    }
-                    aria-label={`Remove ${item} filter`}
+                    onClick={() => onFilterChange("isVerified", false)}
+                    aria-label="Remove verification filter"
                   >
                     <X className="w-3 h-3" />
                   </button>
                 </span>
-              ))}
+              )}
 
-              <button
-                onClick={() => {
-                  onFilterChange("priceRange", [3, 100])
-                  onFilterChange("availability", [])
-                  onFilterChange("specialties", [])
-                  onFilterChange("alsoSpeaks", [])
-                  onFilterChange("countries", [])
-                  onFilterChange("certifications", [])
-                  onFilterChange("experience", "any")
-                  onFilterChange("lessonTypes", [])
-                }}
-                className={styles.clearAllFiltersButton}
-              >
-                Clear all
-              </button>
+              {filters.experience !== "any" && (
+                <span className={styles.activeFilterTag}>
+                  {filters.experience} years
+                  <button
+                    onClick={() => onFilterChange("experience", "any")}
+                    aria-label="Remove experience filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {filters.averageRating > 0 && (
+                <span className={styles.activeFilterTag}>
+                  {filters.averageRating}+ stars
+                  <button
+                    onClick={() => onFilterChange("averageRating", 0)}
+                    aria-label="Remove rating filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {filters.totalReviews > 0 && (
+                <span className={styles.activeFilterTag}>
+                  {filters.totalReviews}+ reviews
+                  <button
+                    onClick={() => onFilterChange("totalReviews", 0)}
+                    aria-label="Remove reviews filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+                              <button
+                  onClick={() => {
+                    onFilterChange("hourlyRate", [3, 100])
+                    onFilterChange("isAvailable", false)
+                    onFilterChange("isVerified", false)
+                    onFilterChange("experience", "any")
+                    onFilterChange("averageRating", 0)
+                    onFilterChange("totalReviews", 0)
+                  }}
+                  className={styles.clearAllFiltersButton}
+                >
+                  Clear all
+                </button>
             </div>
           </div>
         )}
@@ -887,14 +885,12 @@ export default function SearchPage() {
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [filters, setFilters] = useState<Filters>({
     subject: "English",
-    priceRange: [3, 100],
-    availability: [],
-    specialties: [],
-    alsoSpeaks: [],
-    countries: [],
-    certifications: [],
+    hourlyRate: [3, 100],
     experience: "any",
-    lessonTypes: [],
+    isVerified: false,
+    isAvailable: false,
+    averageRating: 0,
+    totalReviews: 0,
     sortBy: "Our top picks",
   })
 
@@ -971,8 +967,36 @@ export default function SearchPage() {
       )
     }
 
-    // Price range filter
-    filtered = filtered.filter((tutor) => tutor.price >= filters.priceRange[0] && tutor.price <= filters.priceRange[1])
+    // Hourly rate filter
+    filtered = filtered.filter((tutor) => tutor.price >= filters.hourlyRate[0] && tutor.price <= filters.hourlyRate[1])
+
+    // Availability filter
+    if (filters.isAvailable) {
+      filtered = filtered.filter((tutor) => tutor.isOnline)
+    }
+
+    // Verification filter
+    if (filters.isVerified) {
+      filtered = filtered.filter((tutor) => tutor.isProfessional)
+    }
+
+    // Experience filter
+    if (filters.experience !== "any") {
+      // This would need to be implemented based on actual experience data
+      // For now, we'll filter by total lessons as a proxy
+      const minLessons = filters.experience === "1+" ? 50 : filters.experience === "3+" ? 150 : 300
+      filtered = filtered.filter((tutor) => tutor.totalLessons >= minLessons)
+    }
+
+    // Rating filter
+    if (filters.averageRating > 0) {
+      filtered = filtered.filter((tutor) => tutor.rating >= filters.averageRating)
+    }
+
+    // Reviews filter
+    if (filters.totalReviews > 0) {
+      filtered = filtered.filter((tutor) => tutor.reviews >= filters.totalReviews)
+    }
 
     // Add more filtering logic based on other filters...
 
@@ -986,7 +1010,7 @@ export default function SearchPage() {
       {/* Page Title */}
       <section className={styles.titleSection}>
         <div className={styles.sectionContent}>
-          <h1 className={styles.pageTitle}>Online English tutors & teachers for private classes</h1>
+          <h1 className={styles.pageTitle}>Tutors & teachers for private classes</h1>
         </div>
       </section>
 

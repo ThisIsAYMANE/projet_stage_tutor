@@ -149,7 +149,7 @@ function Hero() {
 // Quick Match Component
 function QuickMatch() {
   const subjects = ["Mathematics", "Science", "English", "History", "Languages"]
-  const levels = ["Elementary", "Middle School", "High School", "College", "Graduate"]
+  const levels = ["", "", "", "", ""]
 
   return (
     <motion.section
@@ -181,9 +181,9 @@ function QuickMatch() {
                 </select>
               </div>
               <div>
-                <label htmlFor="level-select" className={styles.labelQuickMatch}>Level</label>
+                <label htmlFor="level-select" className={styles.labelQuickMatch}>Language</label>
                 <select id="level-select" className={styles.select} aria-label="Level">
-                  <option value="">Level</option>
+                  <option value="">Language</option>
                   {levels.map((level) => (
                     <option key={level} value={level.toLowerCase()}>
                       {level}

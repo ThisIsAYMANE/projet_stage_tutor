@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import * as bcrypt from 'bcryptjs';
 
 // Initialize Firebase client SDK
 const firebaseConfig = {
@@ -21,12 +22,39 @@ export async function POST(request: NextRequest) {
     const data = await request.json();
     // For demo: generate userId from email (replace with real Auth userId in production)
     const userId = data.email.replace(/[^a-zA-Z0-9]/g, '');
-    const tutorProfileRef = doc(db, 'users', userId, 'tutorProfile', 'profile');
-    await setDoc(tutorProfileRef, {
-      ...data,
+
+    // Hash the password before storing
+    const hashedPassword = await bcrypt.hash(data.password, 10);
+
+    // Main user fields
+    const userDocData = {
+      email: data.email,
+      password: hashedPassword,
+      Name: data.Name || '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+      profilePicture: data.profilePicture || '',
+      userType: 'student', // Always set to 'student' for student registration
+      isTutor: false,
+    };
+    await setDoc(doc(db, 'users', userId), userDocData);
+
+    // If tutor, create tutorProfile/profile with tutor-specific fields
+    if (data.userType === 'tutor') {
+      const tutorProfileData = {
+        bio: data.bio || '',
+        hourlyRate: data.hourlyRate || 0,
+        experience: data.experience || '',
+        isVerified: false,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        isAvailable: true,
+        averageRating: 0,
+        totalReviews: 0,
+      };
+      await setDoc(doc(db, 'users', userId, 'tutorProfile', 'profile'), tutorProfileData);
+    }
+
     return NextResponse.json({ success: true, userId });
   } catch (error: any) {
     return NextResponse.json({ error: error.message }, { status: 500 });

@@ -41,7 +41,13 @@ const LoginPage: React.FC = () => {
       localStorage.setItem('user', JSON.stringify(data.user));
       
       // Redirect to dashboard or home page
-      window.location.href = '/';
+      if (data.user.userType === 'student') {
+        window.location.href = '/student-dash';
+      } else if (data.user.userType === 'tutor') {
+        window.location.href = '/tutor-dash';
+      } else {
+        window.location.href = '/';
+      }
       
     } catch (error) {
       console.error('Login error:', error);

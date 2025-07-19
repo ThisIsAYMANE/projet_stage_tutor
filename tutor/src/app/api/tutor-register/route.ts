@@ -20,31 +20,39 @@ const db = getFirestore(app);
 export async function POST(request: NextRequest) {
   try {
     const data = await request.json();
-    console.log('Tutor registration received data:', data);
-    
     // For demo: generate userId from email (replace with real Auth userId in production)
     const userId = data.email.replace(/[^a-zA-Z0-9]/g, '');
-    console.log('Generated userId:', userId);
-    
+
     // Hash the password before saving
     const hashedPassword = await bcrypt.hash(data.password, 10);
-    console.log('Password hashed successfully');
-    
-    const tutorProfileRef = doc(db, 'users', userId, 'tutorProfile', 'profile');
-    console.log('About to save to Firestore path:', `users/${userId}/tutorProfile/profile`);
-    
-    const profileData = {
-      ...data,
-      password: hashedPassword, // Save hashed password instead of plain text
+
+    // Main user fields
+    const userDocData = {
+      email: data.email,
+      password: hashedPassword,
+      Name: data.Name || '',
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
+      profilePicture: data.profilePicture || '',
+      userType: 'tutor', // Always set to 'tutor' for tutor registration
+      isTutor: true,
     };
-    
-    console.log('Saving profile data:', profileData);
-    
-    await setDoc(tutorProfileRef, profileData);
-    console.log('Profile saved successfully to Firestore');
-    
+    await setDoc(doc(db, 'users', userId), userDocData);
+
+    // Tutor-specific fields (do not include password/email)
+    const tutorProfileData = {
+      bio: data.bio || '',
+      hourlyRate: data.hourlyRate || 0,
+      experience: data.experience || '',
+      isVerified: false,
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+      isAvailable: true,
+      averageRating: 0,
+      totalReviews: 0,
+    };
+    await setDoc(doc(db, 'users', userId, 'tutorProfile', 'profile'), tutorProfileData);
+
     return NextResponse.json({ success: true, userId });
   } catch (error: any) {
     console.error('Tutor registration error:', error);

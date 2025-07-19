@@ -28,9 +28,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Generate userId from email (same as in registration)
-    const userId = email.replace(/[^a-zA-Z0-9]/g, '');
-
     // First, try to find user in the users collection
     const usersRef = collection(db, "users");
     const q = query(usersRef, where("email", "==", email));
@@ -38,21 +35,12 @@ export async function POST(request: NextRequest) {
 
     let userData = null;
     let userDoc = null;
+    let tutorProfileData = null;
 
     if (!querySnapshot.empty) {
-      // Regular user found
+      // User found (student or tutor)
       userDoc = querySnapshot.docs[0];
       userData = userDoc.data();
-    } else {
-      // Check for tutor profile
-      const tutorProfileRef = doc(db, 'users', userId, 'tutorProfile', 'profile');
-      const tutorProfileSnap = await getDoc(tutorProfileRef);
-      
-      if (tutorProfileSnap.exists()) {
-        // Tutor profile found
-        userData = tutorProfileSnap.data();
-        userDoc = { id: userId }; // Create a mock doc for consistency
-      }
     }
 
     if (!userData) {
@@ -62,7 +50,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify password
+    // Verify password from main user doc
     const isPasswordValid = await bcrypt.compare(password, userData.password);
 
     if (!isPasswordValid) {
@@ -72,9 +60,34 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // If tutor, fetch tutorProfile/profile and merge
+    let mergedUser = { ...userData };
+    if (userData.userType === 'tutor') {
+      if (!userDoc) {
+        return NextResponse.json(
+          { error: "User document not found." },
+          { status: 500 }
+        );
+      }
+      const userId = userDoc.id;
+      const tutorProfileRef = doc(db, 'users', userId, 'tutorProfile', 'profile');
+      const tutorProfileSnap = await getDoc(tutorProfileRef);
+      if (tutorProfileSnap.exists()) {
+        tutorProfileData = tutorProfileSnap.data();
+        mergedUser = { ...mergedUser, ...tutorProfileData };
+      }
+    }
+
     // Return user data (excluding password)
-    const { password: _, ...userWithoutPassword } = userData;
-    
+    const { password: _, ...userWithoutPassword } = mergedUser;
+
+    if (!userDoc) {
+      return NextResponse.json(
+        { error: "User document not found." },
+        { status: 500 }
+      );
+    }
+
     return NextResponse.json({
       message: "Login successful",
       user: {

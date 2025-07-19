@@ -149,7 +149,7 @@ function Hero() {
 // Quick Match Component
 function QuickMatch() {
   const subjects = ["Mathematics", "Science", "English", "History", "Languages"]
-  const levels = ["", "", "", "", ""]
+  const levels = [""]
 
   return (
     <motion.section

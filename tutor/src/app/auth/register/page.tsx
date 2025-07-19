@@ -33,7 +33,7 @@ const SignUpPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          name: formData.name,
+          Name: formData.name,
           email: formData.email,
           password: formData.password,
         }),

@@ -83,39 +83,70 @@ const LoginPage: React.FC = () => {
             </nav>
 
             <div className={styles.headerActions}>
-              <div className={styles.dropdown}>
-                <button
-                  onClick={() => setLanguageDropdown(!languageDropdown)}
-                  className={styles.dropdownButton}
-                >
-                  <span>English, USD</span>
-                  <svg className={styles.dropdownIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="6,9 12,15 18,9"></polyline>
-                  </svg>
-                </button>
-                {languageDropdown && (
-                  <div className={styles.dropdownMenu}>
-                    <a href="#" className={styles.dropdownItem}>
-                      English, USD
-                    </a>
-                    <a href="#" className={styles.dropdownItem}>
-                      Español, EUR
-                    </a>
-                  </div>
-                )}
-              </div>
-              
-              <button className={styles.helpButton} aria-label="Help" title="Help">
-                <svg className={styles.helpIcon} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
-                  <line x1="12" y1="17" x2="12.01" y2="17"></line>
-                </svg>
-              </button>
-              
-              <button className={styles.loginButton}>
-                Log In
-              </button>
+              {/* DROPDOWN LOGIC START */}
+              {typeof window !== 'undefined' && localStorage.getItem('user') ? (
+                (() => {
+                  const user = JSON.parse(localStorage.getItem('user'));
+                  const [dropdownOpen, setDropdownOpen] = useState(false);
+                  return (
+                    <div style={{ position: "relative" }}>
+                      <button
+                        onClick={() => setDropdownOpen((open) => !open)}
+                        className={styles.loginButton}
+                      >
+                        Menu
+                      </button>
+                      {dropdownOpen && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            right: 0,
+                            top: "100%",
+                            background: "#fff",
+                            border: "1px solid #eee",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                            zIndex: 10,
+                            minWidth: 120,
+                          }}
+                        >
+                          <div
+                            style={{ padding: "8px 16px", cursor: "pointer" }}
+                            onClick={() => {
+                              setDropdownOpen(false);
+                              if (user.userType === "student") {
+                                window.location.href = "/student-dash";
+                              } else if (user.userType === "tutor") {
+                                window.location.href = "/tutor-dash";
+                              }
+                            }}
+                          >
+                            Dashboard
+                          </div>
+                          <div
+                            style={{ padding: "8px 16px", cursor: "pointer" }}
+                            onClick={() => {
+                              localStorage.clear();
+                              window.location.href = "/landing-page";
+                            }}
+                          >
+                            Logout
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              ) : (
+                <>
+                  <Link href="/auth/login" className={styles.loginButton}>
+                    Log In
+                  </Link>
+                  <Link href="/auth/register" className={styles.signupButton}>
+                    Sign Up
+                  </Link>
+                </>
+              )}
+              {/* DROPDOWN LOGIC END */}
             </div>
           </div>
         </div>

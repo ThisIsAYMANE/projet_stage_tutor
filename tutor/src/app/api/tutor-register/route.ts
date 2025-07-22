@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
     };
     await setDoc(doc(db, 'users', userId), userDocData);
 
-    // Tutor-specific fields (do not include password/email)
+    // Tutor-specific fields (add all fields you want to save)
     const tutorProfileData = {
       bio: data.bio || '',
       hourlyRate: data.hourlyRate || 0,
@@ -50,6 +50,14 @@ export async function POST(request: NextRequest) {
       isAvailable: true,
       averageRating: 0,
       totalReviews: 0,
+      subjects: data.subjects || [],
+      languages: data.languages || [],
+      teachingMethods: data.teachingMethods || [],
+      location: data.location || '',
+      title: data.title || '',
+      phoneNumber: data.phoneNumber || '',
+      profilePic: data.profilePic || '',
+      rating: data.rating || 0,
     };
     await setDoc(doc(db, 'users', userId, 'tutorProfile', 'profile'), tutorProfileData);
 

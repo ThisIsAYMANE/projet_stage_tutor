@@ -40,6 +40,7 @@ export default function StudentDashboard() {
 
   // Student profile data (mock for now)
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
+  const [userProfile, setUserProfile] = useState<{ Name?: string, email?: string, phone?: string, profilePicture?: string } | null>(null);
 
   // Mock conversations and messages
   const conversations: Conversation[] = [
@@ -108,6 +109,12 @@ export default function StudentDashboard() {
         }
         // Generate userId as in registration
         const userId = user.email.replace(/[^a-zA-Z0-9]/g, '');
+        // Fetch main user doc for Name, email, phone, profilePicture
+        const userDocRef = doc(db, 'users', userId);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          setUserProfile(userDocSnap.data());
+        }
         // Fetch student profile from Firestore (main user doc)
         const profileRef = doc(db, 'users', userId);
         const profileSnap = await getDoc(profileRef);
@@ -174,7 +181,9 @@ export default function StudentDashboard() {
       {/* Responsive Header for mobile/tablet */}
       <div className={styles.responsiveHeader}>
         <div className={styles.headerContent}>
-          <div className={styles.logoText}>TutorConnect</div>
+          <a href="/landing-page" className={styles.logoLink} style={{textDecoration:'none'}}>
+            <span className={styles.logoText}>TutorConnect</span>
+          </a>
           <button
             className={styles.hamburger}
             aria-label="Open menu"
@@ -196,10 +205,10 @@ export default function StudentDashboard() {
       {/* Sidebar (hidden on mobile/tablet) */}
       <div className={styles.sidebar}>
         <div className={styles.header}>
-          <div className={styles.logo}>
+          <a href="/landing-page" className={styles.logoLink} style={{display:'flex',alignItems:'center',textDecoration:'none'}}>
             <div className={styles.logoIcon}>TC</div>
             <span className={styles.logoText}>TutorConnect</span>
-          </div>
+          </a>
         </div>
         <nav className={styles.nav}>
           <div 
@@ -311,8 +320,9 @@ export default function StudentDashboard() {
                   )}
                 </div>
                 <div className={styles.profileInfo}>
-                  <h3 className={styles.profileName}>{studentProfile?.Name || 'Student Name'}</h3>
-                  <p className={styles.profileRole}>Student</p>
+                  <h3 className={styles.profileName}>{userProfile?.Name || studentProfile?.Name || 'Student Name'}</h3>
+                  <p className={styles.profileRole}>{userProfile?.email || studentProfile?.email || 'Email'}</p>
+                  {userProfile?.phone && <p className={styles.profileRole}>{userProfile.phone}</p>}
                 </div>
               </div>
             </div>

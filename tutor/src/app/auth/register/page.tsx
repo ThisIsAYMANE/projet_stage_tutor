@@ -85,35 +85,70 @@ const SignUpPage: React.FC = () => {
             </nav>
 
             <div className={styles.headerActions}>
-              <div className={styles.dropdown}>
-                <button 
-                  className={styles.dropdownButton}
-                  onClick={toggleDropdown}
-                >
-                  English, USD
-                  <ChevronDown className={styles.dropdownIcon} />
-                </button>
-                {dropdownOpen && (
-                  <div className={styles.dropdownMenu}>
-                    <Link href="#" className={styles.dropdownItem}>
-                      English, USD
-                    </Link>
-                    <Link href="#" className={styles.dropdownItem}>
-                      Français, EUR
-                    </Link>
-                  </div>
-                )}
-              </div>
-
-              <button className={styles.helpButton} aria-label="Help">
-                <HelpCircle className={styles.helpIcon} />
-              </button>
-
-              <Link href="../login">
-                <button className={styles.loginButton}>
-                  Log in
-                </button>
-              </Link>
+              {/* DROPDOWN LOGIC START */}
+              {typeof window !== 'undefined' && localStorage.getItem('user') ? (
+                (() => {
+                  const user = JSON.parse(localStorage.getItem('user'));
+                  const [dropdownOpen, setDropdownOpen] = useState(false);
+                  return (
+                    <div style={{ position: "relative" }}>
+                      <button
+                        onClick={() => setDropdownOpen((open) => !open)}
+                        className={styles.loginButton}
+                      >
+                        Menu
+                      </button>
+                      {dropdownOpen && (
+                        <div
+                          style={{
+                            position: "absolute",
+                            right: 0,
+                            top: "100%",
+                            background: "#fff",
+                            border: "1px solid #eee",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                            zIndex: 10,
+                            minWidth: 120,
+                          }}
+                        >
+                          <div
+                            style={{ padding: "8px 16px", cursor: "pointer" }}
+                            onClick={() => {
+                              setDropdownOpen(false);
+                              if (user.userType === "student") {
+                                window.location.href = "/student-dash";
+                              } else if (user.userType === "tutor") {
+                                window.location.href = "/tutor-dash";
+                              }
+                            }}
+                          >
+                            Dashboard
+                          </div>
+                          <div
+                            style={{ padding: "8px 16px", cursor: "pointer" }}
+                            onClick={() => {
+                              localStorage.clear();
+                              window.location.href = "/landing-page";
+                            }}
+                          >
+                            Logout
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()
+              ) : (
+                <>
+                  <Link href="/auth/login" className={styles.loginButton}>
+                    Log In
+                  </Link>
+                  <Link href="/auth/register" className={styles.signupButton}>
+                    Sign Up
+                  </Link>
+                </>
+              )}
+              {/* DROPDOWN LOGIC END */}
             </div>
           </div>
         </div>

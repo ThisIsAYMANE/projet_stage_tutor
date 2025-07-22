@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import styles from '../../styles/TutorDash.module.css';
 import { db } from '../../../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 
 interface Message {
   id: string;
@@ -50,12 +50,45 @@ export default function TutorDashboard() {
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Profile form states
-  const [profileData, setProfileData] = useState({
+  // Add options for dropdowns/multi-selects
+  const subjectOptions: string[] = [
+    'Mathematics', 'Science', 'English', 'History', 'Languages', 'Computer Science', 'Physics', 'Chemistry', 'Biology', 'Economics'
+  ];
+  const languageOptions: string[] = [
+    'English', 'French', 'Spanish', 'German', 'Arabic', 'Chinese', 'Japanese', 'Russian', 'Portuguese', 'Italian'
+  ];
+  const teachingMethodOptions: string[] = ['Online', 'In-person', 'Hybrid'];
+  const locationOptions: string[] = [
+    "Casablanca", "Rabat", "Fes", "Marrakech", "Agadir", "Tangier", "Meknes", "Oujda", "Kenitra", "Tetouan", "Safi", "El Jadida", "Beni Mellal", "Nador", "Taza", "Khouribga", "Settat", "Berrechid", "Khemisset", "Larache", "Guelmim", "Ksar El Kebir", "Taourirt", "Berkane", "Khenifra", "Inezgane", "Temara", "Sidi Slimane", "Mohammedia", "Sidi Kacem", "Sidi Bennour", "Errachidia", "Guercif", "Ouarzazate", "Dakhla", "Essaouira", "Tiznit", "Taroudant", "Tiflet", "Tan-Tan", "Ouazzane", "Sefrou", "Youssoufia", "Martil", "Midelt", "Azrou", "Ait Melloul", "Fnideq", "Skhirat", "Jerada", "Benslimane", "Ait Ourir"
+  ];
+
+  // Add to profileData state
+  const [profileData, setProfileData] = useState<{
+    fullName: string;
+    email: string;
+    phone: string;
+    bio: string;
+    title: string;
+    subject: string;
+    language: string;
+    teachingMethod: string;
+    location: string;
+    hourlyRate: string;
+    experience: string;
+    rating: string;
+  }>({
     fullName: '',
     email: '',
     phone: '',
-    bio: ''
+    bio: '',
+    title: '',
+    subject: '',
+    language: '',
+    teachingMethod: '',
+    location: '',
+    hourlyRate: '',
+    experience: '',
+    rating: '',
   });
   
   // Additional tutor profile data
@@ -132,6 +165,8 @@ export default function TutorDashboard() {
   const activeStudent = conversations.find(c => c.id === activeConversation);
   const activeMessages = messages[activeConversation] || [];
 
+  const [userProfile, setUserProfile] = useState<{ Name?: string, email?: string } | null>(null);
+
   useEffect(() => {
     const fetchTutorProfile = async () => {
       try {
@@ -150,8 +185,13 @@ export default function TutorDashboard() {
           setLoading(false);
           return;
         }
-        // Generate userId as in registration
         const userId = user.email.replace(/[^a-zA-Z0-9]/g, '');
+        // Fetch main user doc for Name
+        const userDocRef = doc(db, 'users', userId);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          setUserProfile(userDocSnap.data());
+        }
         // Fetch tutor profile from Firestore
         const profileRef = doc(db, 'users', userId, 'tutorProfile', 'profile');
         const profileSnap = await getDoc(profileRef);
@@ -163,6 +203,14 @@ export default function TutorDashboard() {
             email: data.email || '',
             phone: data.phone || '',
             bio: data.bio || '',
+            title: data.title || '',
+            subject: data.subjects && data.subjects.length > 0 ? data.subjects[0] : '',
+            language: data.languages && data.languages.length > 0 ? data.languages[0] : '',
+            teachingMethod: data.teachingMethods && data.teachingMethods.length > 0 ? data.teachingMethods[0] : '',
+            location: data.location || '',
+            hourlyRate: data.hourlyRate !== undefined && data.hourlyRate !== null ? String(data.hourlyRate) : '',
+            experience: data.experience !== undefined && data.experience !== null ? String(data.experience) : '',
+            rating: data.averageRating !== undefined && data.averageRating !== null ? String(data.averageRating) : '',
           });
         } else {
           // Try fallback from localStorage
@@ -175,6 +223,14 @@ export default function TutorDashboard() {
               email: fallbackData.email || '',
               phone: fallbackData.phone || '',
               bio: fallbackData.bio || '',
+              title: fallbackData.title || '',
+              subject: fallbackData.subjects && fallbackData.subjects.length > 0 ? fallbackData.subjects[0] : '',
+              language: fallbackData.languages && fallbackData.languages.length > 0 ? fallbackData.languages[0] : '',
+              teachingMethod: fallbackData.teachingMethods && fallbackData.teachingMethods.length > 0 ? fallbackData.teachingMethods[0] : '',
+              location: fallbackData.location || '',
+              hourlyRate: fallbackData.hourlyRate || '',
+              experience: fallbackData.experience || '',
+              rating: fallbackData.averageRating || '',
             });
             setError(null);
           } else {
@@ -225,8 +281,65 @@ export default function TutorDashboard() {
       reader.readAsDataURL(file);
     }
   };
-  const handleSaveProfile = () => {
-    // Save profile logic
+  const handleSaveProfile = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      // Get user from localStorage
+      const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+      if (!userStr) {
+        setError('No user data found. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      const user = JSON.parse(userStr);
+      if (!user.email) {
+        setError('Invalid user data. Please log in again.');
+        setLoading(false);
+        return;
+      }
+      const userId = user.email.replace(/[^a-zA-Z0-9]/g, '');
+      // Debug: log profileData before saving
+      console.log('Saving tutor profile:', profileData);
+      // Save main user info
+      await setDoc(doc(db, 'users', userId), {
+        email: profileData.email,
+        Name: profileData.fullName,
+        phone: profileData.phone,
+        profilePicture: uploadedImage || '',
+        userType: 'tutor',
+        isTutor: true,
+        createdAt: user.createdAt || serverTimestamp(),
+        updatedAt: serverTimestamp(),
+      }, { merge: true });
+      // Save tutor profile info
+      await setDoc(doc(db, 'users', userId, 'tutorProfile', 'profile'), {
+        bio: profileData.bio,
+        hourlyRate: profileData.hourlyRate,
+        experience: profileData.experience,
+        isVerified: false, // If you want to allow editing, add to form
+        createdAt: tutorProfile?.createdAt || serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        isAvailable: true, // If you want to allow editing, add to form
+        averageRating: profileData.rating || 0,
+        totalReviews: 0, // If you want to allow editing, add to form
+        subject: profileData.subject,
+        language: profileData.language,
+        location: profileData.location,
+        teachingMethod: profileData.teachingMethod,
+        rating: profileData.rating || 0,
+        phoneNumber: profileData.phone,
+        profilePic: uploadedImage || '',
+        title: profileData.title,
+      }, { merge: true });
+      setError(null);
+      alert('Profile saved successfully!');
+    } catch (err) {
+      setError('Failed to save profile. Please try again.');
+      console.error('Error saving profile:', err);
+    } finally {
+      setLoading(false);
+    }
   };
   const handlePublishAnnouncement = () => {
     // Publish announcement logic
@@ -261,7 +374,9 @@ export default function TutorDashboard() {
       {/* Responsive Header for mobile/tablet */}
       <div className={styles.responsiveHeader}>
         <div className={styles.headerContent}>
-          <div className={styles.logoText}>TutorConnect</div>
+          <a href="/landing-page" className={styles.logoLink} style={{textDecoration:'none'}}>
+            <span className={styles.logoText}>TutorConnect</span>
+          </a>
           <button
             className={styles.hamburger}
             aria-label="Open menu"
@@ -284,10 +399,10 @@ export default function TutorDashboard() {
       {/* Sidebar (hidden on mobile/tablet) */}
       <div className={styles.sidebar}>
         <div className={styles.header}>
-          <div className={styles.logo}>
+          <a href="/landing-page" className={styles.logoLink} style={{display:'flex',alignItems:'center',textDecoration:'none'}}>
             <div className={styles.logoIcon}>TC</div>
             <span className={styles.logoText}>TutorConnect</span>
-          </div>
+          </a>
         </div>
         <div className={styles.searchContainer}>
           <input
@@ -474,8 +589,12 @@ export default function TutorDashboard() {
                   )}
                 </div>
                 <div className={styles.profileInfo}>
-                  <h3 className={styles.profileName}>{tutorProfile?.name || 'Tutor Name'}</h3>
-                  <p className={styles.profileRole}>Tutor</p>
+                  <h3 className={styles.profileName}>
+                    {userProfile?.Name || tutorProfile?.name || profileData.fullName || 'Tutor Name'}
+                  </h3>
+                  <p className={styles.profileRole}>
+                    {tutorProfile?.email || profileData.email || 'Email'}
+                  </p>
                   {tutorProfile?.isVerified && (
                     <span style={{ color: '#4caf50', fontSize: '0.8rem' }}>✓ Verified</span>
                   )}
@@ -543,6 +662,97 @@ export default function TutorDashboard() {
                     value={profileData.phone}
                     onChange={(e) => handleProfileUpdate('phone', e.target.value)}
                     placeholder="Enter your phone"
+                    className={styles.formInput}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Profile Title</label>
+                  <input
+                    type="text"
+                    value={profileData.title}
+                    onChange={e => setProfileData(prev => ({ ...prev, title: e.target.value }))}
+                    placeholder="Enter your profile title"
+                    className={styles.formInput}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Subjects</label>
+                  <select
+                    value={profileData.subject || (tutorProfile?.subjects && tutorProfile.subjects[0]) || ''}
+                    onChange={e => setProfileData(prev => ({ ...prev, subject: e.target.value }))}
+                    className={styles.formInput}
+                    aria-label="Select subject"
+                  >
+                    <option value="">Select a subject</option>
+                    {subjectOptions.map(subj => <option key={subj} value={subj}>{subj}</option>)}
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Languages</label>
+                  <select
+                    value={profileData.language || (tutorProfile?.languages && tutorProfile.languages[0]) || ''}
+                    onChange={e => setProfileData(prev => ({ ...prev, language: e.target.value }))}
+                    className={styles.formInput}
+                    aria-label="Select language"
+                  >
+                    <option value="">Select a language</option>
+                    {languageOptions.map(lang => <option key={lang} value={lang}>{lang}</option>)}
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Teaching Methods</label>
+                  <select
+                    value={profileData.teachingMethod || (tutorProfile?.teachingMethods && tutorProfile.teachingMethods[0]) || ''}
+                    onChange={e => setProfileData(prev => ({ ...prev, teachingMethod: e.target.value }))}
+                    className={styles.formInput}
+                    aria-label="Select teaching method"
+                  >
+                    <option value="">Select a method</option>
+                    {teachingMethodOptions.map(method => <option key={method} value={method}>{method}</option>)}
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Location</label>
+                  <select
+                    value={String(profileData.location)}
+                    onChange={e => setProfileData(prev => ({ ...prev, location: e.target.value }))}
+                    className={styles.formInput}
+                    aria-label="Select location"
+                  >
+                    <option value="">Select a city</option>
+                    {locationOptions.map(city => <option key={city} value={String(city)}>{city}</option>)}
+                  </select>
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Hourly Rate (MAD)</label>
+                  <input
+                    type="number"
+                    value={profileData.hourlyRate}
+                    onChange={e => setProfileData(prev => ({ ...prev, hourlyRate: e.target.value }))}
+                    placeholder="Enter your hourly rate"
+                    className={styles.formInput}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Experience</label>
+                  <input
+                    type="text"
+                    value={profileData.experience}
+                    onChange={e => setProfileData(prev => ({ ...prev, experience: e.target.value }))}
+                    placeholder="Describe your experience"
+                    className={styles.formInput}
+                  />
+                </div>
+                <div className={styles.formGroup}>
+                  <label className={styles.formLabel}>Rating</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="5"
+                    step="0.1"
+                    value={String(profileData.rating)}
+                    onChange={e => setProfileData(prev => ({ ...prev, rating: e.target.value }))}
+                    placeholder="Enter your rating"
                     className={styles.formInput}
                   />
                 </div>

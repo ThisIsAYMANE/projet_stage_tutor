@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
@@ -247,6 +247,16 @@ I'm excited to help you on your English learning journey!`,
 
 // Header Component
 function Header() {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userStr = localStorage.getItem("user");
+      if (userStr) setUser(JSON.parse(userStr));
+    }
+  }, []);
+
   return (
     <header className={styles.header}>
       <div className={styles.headerContent}>
@@ -271,14 +281,62 @@ function Header() {
             </Link>
           </nav>
           <div className={styles.headerActions}>
-            <Link href="/login" className={styles.loginButton}>
-              Log In
-            </Link>
+            {user ? (
+              <div style={{ position: "relative" }}>
+                <button
+                  onClick={() => setDropdownOpen((open) => !open)}
+                  className={styles.loginButton}
+                >
+                  Menu
+                </button>
+                {dropdownOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      top: "100%",
+                      background: "#fff",
+                      border: "1px solid #eee",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                      zIndex: 10,
+                      minWidth: 120,
+                    }}
+                  >
+                    <div
+                      style={{ padding: "8px 16px", cursor: "pointer" }}
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        if (user.userType === "student") {
+                          window.location.href = "/student-dash";
+                        } else if (user.userType === "tutor") {
+                          window.location.href = "/tutor-dash";
+                        }
+                      }}
+                    >
+                      Dashboard
+                    </div>
+                    <div
+                      style={{ padding: "8px 16px", cursor: "pointer" }}
+                      onClick={() => {
+                        localStorage.clear();
+                        window.location.href = "/landing-page";
+                      }}
+                    >
+                      Logout
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Link href="/login" className={styles.loginButton}>
+                Log In
+              </Link>
+            )}
           </div>
         </div>
       </div>
     </header>
-  )
+  );
 }
 
 // Booking Modal Component

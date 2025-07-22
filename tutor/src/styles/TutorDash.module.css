@@ -750,43 +750,67 @@ body, .container {
   border: none;
 }
 
+/* 2. Modern .formGrid */
 .formGrid {
-    display: grid;
+  display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 32px;
 }
 @media (max-width: 900px) {
   .formGrid {
     grid-template-columns: 1fr;
+    gap: 20px;
   }
 }
+
 .fullWidth {
   grid-column: 1 / -1;
 }
 
+/* 3. Modern multi-select */
+.formInput[multiple] {
+  min-height: 56px;
+  border-radius: 12px;
+  background: #f7f8fa;
+  border: 1.5px solid #ececec;
+  padding: 14px;
+  font-size: 16px;
+  transition: border-color 0.2s, background 0.2s;
+  box-shadow: 0 1px 4px rgba(44,62,80,0.04);
+}
+.formInput[multiple]:focus {
+  border-color: #e91e63;
+  background: #fff;
+}
+
+/* 4. Consistent form group/label */
 .formGroup {
-  margin-bottom: 20px;
+  margin-bottom: 32px;
   display: flex;
   flex-direction: column;
 }
 .formLabel {
-  font-size: 15px;
-  font-weight: 500;
-  color: #2c3e50;
-  margin-bottom: 8px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #d72660;
+  margin-bottom: 10px;
+  letter-spacing: 0.1px;
 }
+
+/* 5. Inputs and textarea */
 .formInput, .formTextarea {
   width: 100%;
-  padding: 14px 18px;
+  padding: 16px 20px;
   border: 1.5px solid #ececec;
-  border-radius: 10px;
-  font-size: 15px;
+  border-radius: 12px;
+  font-size: 16px;
   background: #f7f8fa;
   transition: border-color 0.2s, background 0.2s;
 }
 .formInput:focus, .formTextarea:focus {
   border-color: #e91e63;
   background: #fff;
+  box-shadow: 0 0 0 2px #fce4ec;
 }
 
 /* Password Card */
@@ -1235,6 +1259,7 @@ body, .container {
   gap: 3.5rem;
 }
 
+/* 6. Only one modern .sectionCard */
 .sectionCard {
   background: #fff;
   border-radius: 22px;
@@ -1365,5 +1390,180 @@ body, .container {
   .sectionCard {
     padding: 0.7rem 0.2rem 0.5rem 0.2rem;
     margin-bottom: 0.7rem;
+  }
+}
+
+/* Password Card */
+.passwordGrid {
+    display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 24px;
+}
+@media (max-width: 900px) {
+  .passwordGrid {
+    grid-template-columns: 1fr;
+  }
+    }
+.passwordInput {
+    position: relative;
+  display: flex;
+  align-items: center;
+}
+.passwordToggle {
+  position: absolute;
+  right: 12px;
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 18px;
+  color: #b0b3b8;
+  padding: 4px;
+}
+.passwordToggle:hover {
+  color: #e91e63;
+}
+
+.saveButtonBar {
+    display: flex;
+    justify-content: flex-end;
+  margin-top: 32px;
+  background: none;
+  box-shadow: none;
+}
+.saveButton {
+  background: linear-gradient(90deg, #e91e63 60%, #f06292 100%);
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 16px 40px;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+  box-shadow: 0 2px 8px rgba(233,30,99,0.10);
+}
+.saveButton:hover {
+  background: linear-gradient(90deg, #d81b60 60%, #e91e63 100%);
+  box-shadow: 0 4px 16px rgba(233,30,99,0.18);
+}
+
+/* Announcement image upload */
+.imageUpload {
+  position: relative;
+  border: 2px dashed #e9ecef;
+  border-radius: 12px;
+  padding: 48px 24px;
+  text-align: center;
+  transition: border-color 0.2s;
+  background: #fcfcfd;
+  margin-bottom: 24px;
+}
+.imageUpload:hover {
+  border-color: #e91e63;
+  background: #fce4ec;
+}
+.uploadIcon {
+  width: 48px;
+  height: 48px;
+  background: #fce4ec;
+  border-radius: 50%;
+    display: flex;
+    align-items: center;
+  justify-content: center;
+  color: #e91e63;
+  font-size: 28px;
+  margin: 0 auto 12px auto;
+}
+.uploadText {
+  color: #2c3e50;
+  font-size: 15px;
+  font-weight: 500;
+}
+.uploadText small {
+  display: block;
+  color: #b0b3b8;
+  font-size: 13px;
+  font-weight: 400;
+}
+.uploadPreview {
+  margin-top: 16px;
+}
+.previewImage {
+  max-width: 100%;
+  max-height: 180px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+.primaryButton {
+  background: #e91e63;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+  margin-right: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.primaryButton:hover {
+  background: #d81b60;
+}
+.secondaryButton {
+  background: #fff;
+  color: #e91e63;
+  border: 1.5px solid #e91e63;
+  border-radius: 10px;
+  padding: 14px 32px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.secondaryButton:hover {
+  background: #fce4ec;
+}
+
+/* Responsive tweaks for cards */
+@media (max-width: 600px) {
+  .sectionCard {
+    padding: 16px;
+  }
+  .profileGrid {
+    gap: 12px;
+  }
+  .formGrid, .passwordGrid {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 900px) {
+  .profileGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .profilePictureCard, .personalInfoCard, .passwordCard {
+    padding: 20px;
+  }
+  .saveButton {
+    padding: 12px 24px;
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 600px) {
+  .sectionCard {
+    padding: 0.7rem 0.2rem 0.5rem 0.2rem;
+    margin-bottom: 0.7rem;
+  }
+  .formGroup {
+    margin-bottom: 18px;
+  }
+  .formInput, .formTextarea {
+    font-size: 1rem;
+    padding: 0.5rem;
   }
 }

@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import {
@@ -21,8 +21,22 @@ import {
 import styles from "../../styles/LandingPage.module.css"
 import { motion } from "framer-motion"
 
+interface User {
+  userType: string;
+  [key: string]: any;
+}
 // Header Component
 function Header() {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userStr = localStorage.getItem("user");
+      if (userStr) setUser(JSON.parse(userStr));
+    }
+  }, []);
+
   return (
     <header className={styles.header}>
       <div className={styles.headerContent}>
@@ -45,17 +59,67 @@ function Header() {
             </Link>
           </nav>
           <div className={styles.headerActions}>
-            <Link href="/auth/login" className={styles.loginButton}>
-              Log In
-            </Link>
-            <Link href="/auth/register" className={styles.signupButton}>
-              Sign Up
-            </Link>
+            {user ? (
+              <div style={{ position: "relative" }}>
+                <button
+                  onClick={() => setDropdownOpen((open) => !open)}
+                  className={styles.loginButton}
+                >
+                  Menu
+                </button>
+                {dropdownOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      top: "100%",
+                      background: "#fff",
+                      border: "1px solid #eee",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                      zIndex: 10,
+                      minWidth: 120,
+                    }}
+                  >
+                    <div
+                      style={{ padding: "8px 16px", cursor: "pointer" }}
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        if ((user as User)?.userType === "student") {
+                          window.location.href = "/student-dash";
+                        } else if ((user as User)?.userType === "tutor") {
+                          window.location.href = "/tutor-dash";
+                        }
+                      }}
+                    >
+                      Dashboard
+                    </div>
+                    <div
+                      style={{ padding: "8px 16px", cursor: "pointer" }}
+                      onClick={() => {
+                        localStorage.clear();
+                        window.location.href = "/landing-page";
+                      }}
+                    >
+                      Logout
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link href="/auth/login" className={styles.loginButton}>
+                  Log In
+                </Link>
+                <Link href="/auth/register" className={styles.signupButton}>
+                  Sign Up
+                </Link>
+              </>
+            )}
           </div>
         </div>
       </div>
     </header>
-  )
+  );
 }
 
 // Hero Component
@@ -148,8 +212,19 @@ function Hero() {
 
 // Quick Match Component
 function QuickMatch() {
-  const subjects = ["Mathematics", "Science", "English", "History", "Languages"]
-  const levels = [""]
+  const subjects = ["Mathematics", "Science", "English", "History", "Languages"];
+  const languages = [
+    "English",
+    "French",
+    "Spanish",
+    "German",
+    "Arabic",
+    "Chinese",
+    "Japanese",
+    "Russian",
+    "Portuguese",
+    "Italian"
+  ];
 
   return (
     <motion.section
@@ -182,11 +257,11 @@ function QuickMatch() {
               </div>
               <div>
                 <label htmlFor="level-select" className={styles.labelQuickMatch}>Language</label>
-                <select id="level-select" className={styles.select} aria-label="Level">
+                <select id="level-select" className={styles.select} aria-label="Language">
                   <option value="">Language</option>
-                  {levels.map((level) => (
-                    <option key={level} value={level.toLowerCase()}>
-                      {level}
+                  {languages.map((lang) => (
+                    <option key={lang} value={lang.toLowerCase()}>
+                      {lang}
                     </option>
                   ))}
                 </select>

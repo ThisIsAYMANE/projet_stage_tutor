@@ -93,6 +93,11 @@ interface TutorCardProps {
   tutor: Tutor
 }
 
+interface User {
+  userType: string;
+  [key: string]: any;
+}
+
 // Multi-Select Component
 function MultiSelect({ label, options, selected, onChange, placeholder }: MultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false) 
@@ -477,6 +482,16 @@ function AdvancedFilterPanel({ isOpen, onClose, filters, onFilterChange }: Advan
 
 // Header Component
 function Header() {
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userStr = localStorage.getItem("user");
+      if (userStr) setUser(JSON.parse(userStr));
+    }
+  }, []);
+
   return (
     <header className={styles.header}>
       <div className={styles.headerContent}>
@@ -493,29 +508,67 @@ function Header() {
             <Link href="/search" className={`${styles.navLink} ${styles.activeNavLink}`}>
               Find tutors
             </Link>
-            
             <Link href="/#become-tutor" className={styles.navLink}>
               Become a tutor
             </Link>
           </nav>
           <div className={styles.headerActions}>
-            <div className={styles.dropdown}>
-              <button className={styles.dropdownButton} aria-label="Language and currency selector">
-                English, USD
-                <ChevronDown className="w-4 h-4 ml-1" />
+            {user ? (
+              <div style={{ position: "relative" }}>
+                <button
+                  onClick={() => setDropdownOpen((open) => !open)}
+                  className={styles.loginButton}
+                >
+                  Menu
               </button>
+                {dropdownOpen && (
+                  <div
+                    style={{
+                      position: "absolute",
+                      right: 0,
+                      top: "100%",
+                      background: "#fff",
+                      border: "1px solid #eee",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                      zIndex: 10,
+                      minWidth: 120,
+                    }}
+                  >
+                    <div
+                      style={{ padding: "8px 16px", cursor: "pointer" }}
+                      onClick={() => {
+                        setDropdownOpen(false);
+                        if ((user as User)?.userType === "student") {
+                          window.location.href = "/student-dash";
+                        } else if ((user as User)?.userType === "tutor") {
+                          window.location.href = "/tutor-dash";
+                        }
+                      }}
+                    >
+                      Dashboard
             </div>
-            <button className={styles.helpButton} aria-label="Help">
-              <HelpCircle className="w-5 h-5" />
-            </button>
+                    <div
+                      style={{ padding: "8px 16px", cursor: "pointer" }}
+                      onClick={() => {
+                        localStorage.clear();
+                        window.location.href = "/landing-page";
+                      }}
+                    >
+                      Logout
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
             <Link href="/auth/login" className={styles.loginButton}>
               Log In
             </Link>
+            )}
           </div>
         </div>
       </div>
     </header>
-  )
+  );
 }
 
 // Enhanced Filter Bar Component
@@ -531,41 +584,53 @@ function FilterBar({ filters, onFilterChange, searchQuery, onSearchChange, onOpe
     "Portuguese",
     "Russian",
     "Arabic",
-  ]
-
+  ];
+  const languages = [
+    "English",
+    "French",
+    "Spanish",
+    "German",
+    "Arabic",
+    "Chinese",
+    "Japanese",
+    "Russian",
+    "Portuguese",
+    "Italian"
+  ];
+  const teachingMethods = [
+    "Online",
+    "In-person",
+    "Hybrid"
+  ];
+  const ratings = [
+    { label: "Any rating", value: 0 },
+    { label: "4+ stars", value: 4 },
+    { label: "4.5+ stars", value: 4.5 },
+    { label: "5 stars", value: 5 }
+  ];
   const quickPriceRanges = [
     { label: "$3 - $40+", value: [3, 40] as [number, number] },
     { label: "$5 - $15", value: [5, 15] as [number, number] },
     { label: "$15 - $25", value: [15, 25] as [number, number] },
     { label: "$25 - $40", value: [25, 40] as [number, number] },
     { label: "$40+", value: [40, 100] as [number, number] },
-  ]
+  ];
 
-  const sortOptions = [
-    "Our top picks",
-    "Price: Low to high",
-    "Price: High to low",
-    "Most popular",
-    "Best rated",
-    "Most lessons",
-  ]
+  // Add new filter states for language, location, teaching methods, and rating
+  const [selectedLanguage, setSelectedLanguage] = useState("");
+  const [location, setLocation] = useState("");
+  const [selectedTeachingMethod, setSelectedTeachingMethod] = useState("");
+  const [selectedRating, setSelectedRating] = useState(0);
 
-  const getActiveFiltersCount = () => {
-    let count = 0
-    if (filters.isAvailable) count++
-    if (filters.isVerified) count++
-    if (filters.experience !== "any") count++
-    if (filters.averageRating > 0) count++
-    if (filters.totalReviews > 0) count++
-    if (filters.hourlyRate[0] !== 3 || filters.hourlyRate[1] !== 100) count++
-    return count
-  }
+  const moroccanCities = [
+    "Casablanca", "Rabat", "Fes", "Marrakech", "Agadir", "Tangier", "Meknes", "Oujda", "Kenitra", "Tetouan", "Safi", "El Jadida", "Beni Mellal", "Nador", "Taza", "Khouribga", "Settat", "Berrechid", "Khemisset", "Larache", "Guelmim", "Ksar El Kebir", "Taourirt", "Berkane", "Khenifra", "Inezgane", "Temara", "Sidi Slimane", "Mohammedia", "Sidi Kacem", "Sidi Bennour", "Errachidia", "Guercif", "Ouarzazate", "Dakhla", "Essaouira", "Tiznit", "Taroudant", "Tiflet", "Tan-Tan", "Ouazzane", "Sefrou", "Youssoufia", "Martil", "Midelt", "Azrou", "Ait Melloul", "Fnideq", "Skhirat", "Jerada", "Benslimane", "Ait Ourir"
+  ];
 
   return (
     <div className={styles.filterSection}>
       <div className={styles.sectionContent}>
-        {/* Main Filter Row */}
         <div className={styles.mainFilters}>
+          {/* Subject */}
           <div className={styles.filterGroup}>
             <label className={styles.filterLabel}>I want to learn</label>
             <div className={styles.selectWrapper}>
@@ -592,7 +657,7 @@ function FilterBar({ filters, onFilterChange, searchQuery, onSearchChange, onOpe
               )}
             </div>
           </div>
-
+          {/* Price per lesson */}
           <div className={styles.filterGroup}>
             <label className={styles.filterLabel}>Price per lesson</label>
             <select
@@ -611,159 +676,69 @@ function FilterBar({ filters, onFilterChange, searchQuery, onSearchChange, onOpe
               ))}
             </select>
           </div>
-
+          {/* Language */}
           <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Availability</label>
+            <label className={styles.filterLabel}>Language</label>
             <select
-              value={filters.isAvailable ? "available" : "any"}
-              onChange={(e) => {
-                onFilterChange("isAvailable", e.target.value === "available")
-              }}
+              value={selectedLanguage}
+              onChange={e => setSelectedLanguage(e.target.value)}
               className={styles.filterSelect}
-              aria-label="Select availability"
+              aria-label="Select language"
             >
-              <option value="any">Any time</option>
-              <option value="available">Available now</option>
-            </select>
-          </div>
-
-          <div className={styles.filterGroup}>
-            <label className={styles.filterLabel}>Advanced Filters</label>
-            <button
-              onClick={onOpenAdvancedFilters}
-              className={`${styles.filterSelect} ${styles.filterButton} ${getActiveFiltersCount() > 0 ? styles.hasSelection : ""}`}
-              aria-label="Open advanced filters"
-            >
-              <SlidersHorizontal className="w-4 h-4 mr-2" />
-              {getActiveFiltersCount() > 0 ? `${getActiveFiltersCount()} active` : "More filters"}
-            </button>
-          </div>
-        </div>
-
-        {/* Secondary Filter Row */}
-        <div className={styles.secondaryFilters}>
-          <div className={styles.sortWrapper}>
-            <span className={styles.sortLabel}>Sort by:</span>
-            <select
-              value={filters.sortBy}
-              onChange={(e) => onFilterChange("sortBy", e.target.value)}
-              className={styles.secondarySelect}
-              aria-label="Sort results by"
-            >
-              {sortOptions.map((option) => (
-                <option key={option} value={option}>
-                  {option}
-                </option>
+              <option value="">Any</option>
+              {languages.map(lang => (
+                <option key={lang} value={lang}>{lang}</option>
               ))}
             </select>
           </div>
-
-          <div className={styles.searchWrapper}>
-            <Search className={styles.searchIcon} />
-            <input
-              type="text"
-              placeholder="Search by name or keyword"
-              value={searchQuery}
-              onChange={(e) => onSearchChange(e.target.value)}
-              className={styles.searchInput}
-              aria-label="Search tutors"
-            />
+          {/* Location */}
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>Location</label>
+            <select
+              value={location}
+              onChange={e => setLocation(e.target.value)}
+              className={styles.filterSelect}
+              aria-label="Select location"
+            >
+              <option value="">Any</option>
+              {moroccanCities.map(city => (
+                <option key={city} value={city}>{city}</option>
+              ))}
+            </select>
           </div>
-        </div>
-
-        {/* Active Filters Display */}
-        {getActiveFiltersCount() > 0 && (
-          <div className={styles.activeFilters}>
-            <span className={styles.activeFiltersLabel}>Active filters:</span>
-            <div className={styles.activeFilterTags}>
-              {filters.hourlyRate[0] !== 3 || filters.hourlyRate[1] !== 100 ? (
-                <span className={styles.activeFilterTag}>
-                  ${filters.hourlyRate[0]} - ${filters.hourlyRate[1]}
-                  <button onClick={() => onFilterChange("hourlyRate", [3, 100])} aria-label="Remove price filter">
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              ) : null}
-
-              {filters.isAvailable && (
-                <span className={styles.activeFilterTag}>
-                  Available now
-                  <button
-                    onClick={() => onFilterChange("isAvailable", false)}
-                    aria-label="Remove availability filter"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-
-              {filters.isVerified && (
-                <span className={styles.activeFilterTag}>
-                  Verified only
-                  <button
-                    onClick={() => onFilterChange("isVerified", false)}
-                    aria-label="Remove verification filter"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-
-              {filters.experience !== "any" && (
-                <span className={styles.activeFilterTag}>
-                  {filters.experience} years
-                  <button
-                    onClick={() => onFilterChange("experience", "any")}
-                    aria-label="Remove experience filter"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-
-              {filters.averageRating > 0 && (
-                <span className={styles.activeFilterTag}>
-                  {filters.averageRating}+ stars
-                  <button
-                    onClick={() => onFilterChange("averageRating", 0)}
-                    aria-label="Remove rating filter"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-
-              {filters.totalReviews > 0 && (
-                <span className={styles.activeFilterTag}>
-                  {filters.totalReviews}+ reviews
-                  <button
-                    onClick={() => onFilterChange("totalReviews", 0)}
-                    aria-label="Remove reviews filter"
-                  >
-                    <X className="w-3 h-3" />
-                  </button>
-                </span>
-              )}
-
-                              <button
-                  onClick={() => {
-                    onFilterChange("hourlyRate", [3, 100])
-                    onFilterChange("isAvailable", false)
-                    onFilterChange("isVerified", false)
-                    onFilterChange("experience", "any")
-                    onFilterChange("averageRating", 0)
-                    onFilterChange("totalReviews", 0)
-                  }}
-                  className={styles.clearAllFiltersButton}
-                >
-                  Clear all
-                </button>
+          {/* Teaching Methods */}
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>Teaching Methods</label>
+            <select
+              value={selectedTeachingMethod}
+              onChange={e => setSelectedTeachingMethod(e.target.value)}
+              className={styles.filterSelect}
+              aria-label="Select teaching method"
+            >
+              <option value="">Any</option>
+              {teachingMethods.map(method => (
+                <option key={method} value={method}>{method}</option>
+              ))}
+            </select>
+          </div>
+          {/* Rating */}
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>Rating</label>
+            <select
+              value={selectedRating}
+              onChange={e => setSelectedRating(Number(e.target.value))}
+              className={styles.filterSelect}
+              aria-label="Select rating"
+            >
+              {ratings.map(r => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
             </div>
           </div>
-        )}
       </div>
     </div>
-  )
+  );
 }
 
 // Tutor Card Component (unchanged)

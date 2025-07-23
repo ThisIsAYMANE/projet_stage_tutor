@@ -48,6 +48,7 @@ const TutorSignup = () => {
   const [languageDropdown, setLanguageDropdown] = useState(false);
   const [locationSuggestions, setLocationSuggestions] = useState<string[]>([]);
   const [languageInput, setLanguageInput] = useState('');
+  const [subjectInput, setSubjectInput] = useState(''); // NEW: for subject entry
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
@@ -80,6 +81,14 @@ const TutorSignup = () => {
     'Arabic', 'French', 'English', 'Spanish', 'German', 'Italian', 'Portuguese', 
     'Dutch', 'Russian', 'Chinese', 'Japanese', 'Korean', 'Turkish', 'Berber', 
     'Tamazight', 'Hassaniya', 'Classical Arabic'
+  ];
+
+  // Predefined subjects for suggestions
+  const predefinedSubjects = [
+    'Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'French', 'Arabic',
+    'History', 'Geography', 'Computer Science', 'Economics', 'Philosophy', 'Music',
+    'Art', 'Physical Education', 'Business', 'Accounting', 'Statistics', 'Programming',
+    'Engineering', 'Literature', 'Spanish', 'German', 'Italian'
   ];
 
   const handleInputChange = (field: keyof FormData, value: any) => {
@@ -136,6 +145,19 @@ const TutorSignup = () => {
   const validateImageFile = (file: File) => {
     const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
     return allowedTypes.includes(file.type);
+  };
+
+  const handleAddSubject = (subject: string) => {
+    if (
+      subject.trim() &&
+      !formData.subjects.includes(subject.trim())
+    ) {
+      handleInputChange('subjects', [...formData.subjects, subject.trim()]);
+      setSubjectInput('');
+    }
+  };
+  const handleRemoveSubject = (subject: string) => {
+    handleInputChange('subjects', formData.subjects.filter(s => s !== subject));
   };
 
   const nextStep = () => {
@@ -294,7 +316,7 @@ const TutorSignup = () => {
     }
 
     const tutorProfile = {
-      name: formData.name,
+      Name: formData.name, // Changed from 'name' to 'Name' to match backend
       email: formData.email,
       password: formData.password, // Include password for account creation
       phone: formData.phone,
@@ -511,19 +533,63 @@ const TutorSignup = () => {
           </div>
         );
       case 1:
+        // Filter predefined subjects for suggestions
+        const filteredSubjects = predefinedSubjects.filter(
+          subj =>
+            subj.toLowerCase().includes(subjectInput.toLowerCase()) &&
+            !formData.subjects.includes(subj)
+        );
         return (
           <div className={styles.step}>
             <h2>Which subjects do you teach?</h2>
             <p style={{ textAlign: 'center', marginBottom: '1rem', fontSize: '0.9rem', color: '#666' }}>
-              Enter the main subject you teach (e.g., Mathematics, Physics, English, etc.)
+              Enter all subjects you teach (e.g., Mathematics, Physics, English, etc.)
             </p>
-            <input
-              type="text"
-              placeholder="e.g., Mathematics, Physics, English"
-              value={formData.subjects[0] || ''}
-              onChange={e => handleInputChange('subjects', [e.target.value])}
-              className={styles.input}
-            />
+            <div style={{ width: '350px', margin: '0 auto 1rem auto', position: 'relative' }}>
+              <div className={styles.languageTagsRow}>
+                {formData.subjects.map(subject => (
+                  <span key={subject} className={styles.languageTag}>
+                    {subject}
+                    <button
+                      type="button"
+                      className={styles.languageTagRemove}
+                      onClick={() => handleRemoveSubject(subject)}
+                      aria-label={`Remove ${subject}`}
+                    >
+                      &times;
+                    </button>
+                  </span>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={subjectInput}
+                onChange={e => setSubjectInput(e.target.value)}
+                className={styles.input}
+                style={{ width: '100%', marginBottom: 0 }}
+                placeholder="Type a subject and press Enter..."
+                aria-label="Add a subject"
+                onKeyDown={e => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddSubject(subjectInput);
+                  }
+                }}
+              />
+              {subjectInput && filteredSubjects.length > 0 && (
+                <ul className={styles.suggestionDropdown} style={{ top: '100%', left: 0, right: 0 }}>
+                  {filteredSubjects.map(subj => (
+                    <li
+                      key={subj}
+                      className={styles.suggestionItem}
+                      onClick={() => handleAddSubject(subj)}
+                    >
+                      {subj}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
             {validationMessage && <div className={styles.validationMessage}>{validationMessage}</div>}
             <div className={styles.buttonRow}>
               {currentStep > 0 && (

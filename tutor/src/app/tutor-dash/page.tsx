@@ -3,7 +3,10 @@
 import { useState, useEffect } from 'react';
 import styles from '../../styles/TutorDash.module.css';
 import { db } from '../../../firebase';
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, serverTimestamp, onSnapshot, updateDoc } from 'firebase/firestore';
+import { useSearchParams } from "next/navigation";
+import { getFirestore, collection, query, where, getDocs, addDoc, doc as getDocRef, orderBy } from "firebase/firestore";
+import app from '../../../firebase';
 
 interface Message {
   id: string;
@@ -43,12 +46,26 @@ interface TutorProfile {
 }
 
 export default function TutorDashboard() {
+  // All hooks at the top, in a single block, before any logic or returns
+  const searchParams = useSearchParams();
+  const contactId = typeof window !== 'undefined' && searchParams ? searchParams.get("contactId") : null;
   const [activeView, setActiveView] = useState<'messages' | 'announcement' | 'profile'>('messages');
   const [activeConversation, setActiveConversation] = useState<string>('sarah');
-  const [messageInput, setMessageInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profileData, setProfileData] = useState<{ fullName: string; email: string; phone: string; bio: string; title: string; subject: string; language: string; teachingMethod: string; location: string; hourlyRate: string; experience: string; rating: string; }>({ fullName: '', email: '', phone: '', bio: '', title: '', subject: '', language: '', teachingMethod: '', location: '', hourlyRate: '', experience: '', rating: '', });
+  const [tutorProfile, setTutorProfile] = useState<TutorProfile | null>(null);
+  const [passwordData, setPasswordData] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
+  const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
+  const [announcementData, setAnnouncementData] = useState({ title: '', description: '' });
+  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [resolvedStudentNames, setResolvedStudentNames] = useState<{ [emailOrId: string]: string }>({});
+  const [messageInput, setMessageInput] = useState('');
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [activeConversationState, setActiveConversationState] = useState<any>(null);
 
   // Add options for dropdowns/multi-selects
   const subjectOptions: string[] = [
@@ -62,117 +79,13 @@ export default function TutorDashboard() {
     "Casablanca", "Rabat", "Fes", "Marrakech", "Agadir", "Tangier", "Meknes", "Oujda", "Kenitra", "Tetouan", "Safi", "El Jadida", "Beni Mellal", "Nador", "Taza", "Khouribga", "Settat", "Berrechid", "Khemisset", "Larache", "Guelmim", "Ksar El Kebir", "Taourirt", "Berkane", "Khenifra", "Inezgane", "Temara", "Sidi Slimane", "Mohammedia", "Sidi Kacem", "Sidi Bennour", "Errachidia", "Guercif", "Ouarzazate", "Dakhla", "Essaouira", "Tiznit", "Taroudant", "Tiflet", "Tan-Tan", "Ouazzane", "Sefrou", "Youssoufia", "Martil", "Midelt", "Azrou", "Ait Melloul", "Fnideq", "Skhirat", "Jerada", "Benslimane", "Ait Ourir"
   ];
 
-  // Add to profileData state
-  const [profileData, setProfileData] = useState<{
-    fullName: string;
-    email: string;
-    phone: string;
-    bio: string;
-    title: string;
-    subject: string;
-    language: string;
-    teachingMethod: string;
-    location: string;
-    hourlyRate: string;
-    experience: string;
-    rating: string;
-  }>({
-    fullName: '',
-    email: '',
-    phone: '',
-    bio: '',
-    title: '',
-    subject: '',
-    language: '',
-    teachingMethod: '',
-    location: '',
-    hourlyRate: '',
-    experience: '',
-    rating: '',
-  });
-  
-  // Additional tutor profile data
-  const [tutorProfile, setTutorProfile] = useState<TutorProfile | null>(null);
-  
-  const [passwordData, setPasswordData] = useState({
-    currentPassword: '',
-    newPassword: '',
-    confirmPassword: ''
-  });
-  const [showPasswords, setShowPasswords] = useState({
-    current: false,
-    new: false,
-    confirm: false
-  });
-
-  // Announcement form states
-  const [announcementData, setAnnouncementData] = useState({
-    title: '',
-    description: ''
-  });
-  const [uploadedImage, setUploadedImage] = useState<string | null>(null);
-
-  const conversations: Conversation[] = [
-    {
-      id: 'sarah',
-      studentName: 'Sarah Johnson',
-      lastMessage: 'Thanks for the math help yesterday!',
-      timestamp: '2m ago',
-      isOnline: true,
-      unreadCount: 2
-    },
-    {
-      id: 'mike',
-      studentName: 'Mike Chen',
-      lastMessage: 'Can we schedule a session for tomorrow?',
-      timestamp: '1h ago',
-      isOnline: false,
-      unreadCount: 0
-    },
-    {
-      id: 'emma',
-      studentName: 'Emma Wilson',
-      lastMessage: 'The chemistry assignment was really helpful',
-      timestamp: '3h ago',
-      isOnline: true,
-      unreadCount: 1
-    }
-  ];
-
-  const messages: Record<string, Message[]> = {
-    sarah: [
-      {
-        id: '1',
-        text: 'Hi! I wanted to thank you for yesterday\'s math session. The quadratic equations finally make sense!',
-        timestamp: '10:30 AM',
-        isFromTutor: false
-      },
-      {
-        id: '2',
-        text: 'I\'m so glad to hear that! You did great work. Keep practicing those problems we went over.',
-        timestamp: '10:32 AM',
-        isFromTutor: true
-      },
-      {
-        id: '3',
-        text: 'Will do! Can we schedule another session for next week?',
-        timestamp: '10:35 AM',
-        isFromTutor: false
-      }
-    ]
-  };
-
-  const activeStudent = conversations.find(c => c.id === activeConversation);
-  const activeMessages = messages[activeConversation] || [];
-
-  const [userProfile, setUserProfile] = useState<{ Name?: string, email?: string } | null>(null);
-
+  // All useEffect hooks here, before any logic or returns
+  // Fetch tutor conversations on mount
   useEffect(() => {
-    const fetchTutorProfile = async () => {
+    const fetchConversations = async () => {
       try {
         setLoading(true);
         setError(null);
-        // Get user from localStorage
         const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
         if (!userStr) {
           setError('No user data found. Please log in again.');
@@ -185,73 +98,116 @@ export default function TutorDashboard() {
           setLoading(false);
           return;
         }
-        const userId = user.email.replace(/[^a-zA-Z0-9]/g, '');
-        // Fetch main user doc for Name
-        const userDocRef = doc(db, 'users', userId);
-        const userDocSnap = await getDoc(userDocRef);
-        if (userDocSnap.exists()) {
-          setUserProfile(userDocSnap.data());
-        }
-        // Fetch tutor profile from Firestore
-        const profileRef = doc(db, 'users', userId, 'tutorProfile', 'profile');
-        const profileSnap = await getDoc(profileRef);
-        if (profileSnap.exists()) {
-          const data = profileSnap.data() as TutorProfile;
-          setTutorProfile(data);
-          setProfileData({
-            fullName: data.name || '',
-            email: data.email || '',
-            phone: data.phone || '',
-            bio: data.bio || '',
-            title: data.title || '',
-            subject: data.subjects && data.subjects.length > 0 ? data.subjects[0] : '',
-            language: data.languages && data.languages.length > 0 ? data.languages[0] : '',
-            teachingMethod: data.teachingMethods && data.teachingMethods.length > 0 ? data.teachingMethods[0] : '',
-            location: data.location || '',
-            hourlyRate: data.hourlyRate !== undefined && data.hourlyRate !== null ? String(data.hourlyRate) : '',
-            experience: data.experience !== undefined && data.experience !== null ? String(data.experience) : '',
-            rating: data.averageRating !== undefined && data.averageRating !== null ? String(data.averageRating) : '',
-          });
-        } else {
-          // Try fallback from localStorage
-          const fallbackStr = typeof window !== 'undefined' ? localStorage.getItem('tutorProfileFallback') : null;
-          if (fallbackStr) {
-            const fallbackData = JSON.parse(fallbackStr);
-            setTutorProfile(fallbackData);
-            setProfileData({
-              fullName: fallbackData.name || '',
-              email: fallbackData.email || '',
-              phone: fallbackData.phone || '',
-              bio: fallbackData.bio || '',
-              title: fallbackData.title || '',
-              subject: fallbackData.subjects && fallbackData.subjects.length > 0 ? fallbackData.subjects[0] : '',
-              language: fallbackData.languages && fallbackData.languages.length > 0 ? fallbackData.languages[0] : '',
-              teachingMethod: fallbackData.teachingMethods && fallbackData.teachingMethods.length > 0 ? fallbackData.teachingMethods[0] : '',
-              location: fallbackData.location || '',
-              hourlyRate: fallbackData.hourlyRate || '',
-              experience: fallbackData.experience || '',
-              rating: fallbackData.averageRating || '',
-            });
-            setError(null);
-          } else {
-            setError('Tutor profile not found. Please complete your profile setup.');
+        // Fetch conversations where tutor is a participant
+        const convQuery = query(
+          collection(db, 'conversations'),
+          where('participants', 'array-contains', user.email),
+          orderBy('lastMessageTimestamp', 'desc')
+        );
+        const convSnap = await getDocs(convQuery);
+        const convs: Conversation[] = [];
+        const nameResolutions: { [emailOrId: string]: string } = {};
+        for (const docSnap of convSnap.docs) {
+          const data = docSnap.data();
+          // Find the student's email/ID (the other participant)
+          const studentEmailOrId = (data.participants || []).find((p: string) => p !== user.email);
+          let studentName = data.studentName || studentEmailOrId || 'Student';
+          // If studentName looks like an email, try to resolve real name
+          if (studentName && studentName.includes('@')) {
+            if (resolvedStudentNames[studentEmailOrId]) {
+              studentName = resolvedStudentNames[studentEmailOrId];
+            } else {
+              try {
+                const studentDocRef = doc(db, 'users', studentEmailOrId.replace(/[^a-zA-Z0-9]/g, ''));
+                const studentDocSnap = await getDoc(studentDocRef);
+                if (studentDocSnap.exists()) {
+                  const sData = studentDocSnap.data();
+                  studentName = sData.Name || sData.name || studentName;
+                  nameResolutions[studentEmailOrId] = studentName;
+                }
+              } catch {}
+            }
           }
+          convs.push({
+            id: docSnap.id,
+            studentName,
+            lastMessage: data.lastMessage || '',
+            timestamp: data.lastMessageTimestamp ? (typeof data.lastMessageTimestamp === 'string' ? data.lastMessageTimestamp : data.lastMessageTimestamp.toDate().toLocaleTimeString()) : '',
+            isOnline: false,
+            unreadCount: data.unreadCount && data.unreadCount[user.email.replace(/[^a-zA-Z0-9]/g, '')] ? data.unreadCount[user.email.replace(/[^a-zA-Z0-9]/g, '')] : 0
+          });
+        }
+        if (Object.keys(nameResolutions).length > 0) {
+          setResolvedStudentNames(prev => ({ ...prev, ...nameResolutions }));
+        }
+        setConversations(convs);
+        if (convs.length > 0) {
+          setActiveConversation(convs[0].id);
         }
       } catch (err) {
-        console.error('Error fetching tutor profile:', err);
-        setError('Failed to load profile data. Please try again.');
+        setError('Failed to load conversations.');
       } finally {
         setLoading(false);
       }
     };
-    fetchTutorProfile();
+    fetchConversations();
   }, []);
 
-  const handleSendMessage = () => {
-    if (messageInput.trim()) {
-      // Here you would typically send the message to your backend
-      console.log('Sending message:', messageInput);
-      setMessageInput('');
+  // Fetch messages for the active conversation
+  useEffect(() => {
+    if (!activeConversation) return;
+    setMessages([]);
+    setLoading(true);
+    const unsub = onSnapshot(
+      collection(db, 'conversations', activeConversation, 'messages'),
+      (querySnapshot) => {
+        const msgs: Message[] = [];
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          msgs.push({
+            id: docSnap.id,
+            text: data.text,
+            timestamp: data.timestamp ? (typeof data.timestamp === 'string' ? data.timestamp : data.timestamp.toDate().toLocaleTimeString()) : '',
+            isFromTutor: data.senderRole === 'tutor',
+          });
+        });
+        setMessages(msgs.sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1)));
+        setLoading(false);
+      },
+      (err) => {
+        setError('Failed to load messages.');
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, [activeConversation]);
+
+  // Send message
+  const handleSendMessage = async () => {
+    if (messageInput.trim() && activeConversation) {
+      try {
+        const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+        // Add message to Firestore
+        await addDoc(
+          collection(db, 'conversations', activeConversation, 'messages'),
+          {
+            text: messageInput.trim(),
+            timestamp: serverTimestamp(),
+            senderRole: 'tutor',
+            senderEmail: user.email,
+          }
+        );
+        // Update lastMessage and lastMessageTimestamp in conversation doc
+        await updateDoc(doc(db, 'conversations', activeConversation), {
+          lastMessage: messageInput.trim(),
+          lastMessageTimestamp: serverTimestamp(),
+        });
+        setMessageInput('');
+      } catch (err) {
+        // Optionally handle error
+      }
     }
   };
 
@@ -364,6 +320,87 @@ export default function TutorDashboard() {
         <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
           <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>
           <button onClick={() => window.location.href = '/auth/login'}>Go to Login</button>
+        </div>
+      </div>
+    );
+  }
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userStr = localStorage.getItem("user");
+      if (userStr) setCurrentUser(JSON.parse(userStr));
+    }
+  }, []);
+
+  useEffect(() => {
+    async function openOrCreateConversation() {
+      if (!contactId || !currentUser) return;
+      // 1. Check if conversation exists
+      const q = query(
+        collection(db, "conversations"),
+        where("participants", "array-contains", currentUser.id)
+      );
+      const snapshot = await getDocs(q);
+      let conversation: any = null;
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.participants.includes(contactId)) {
+          conversation = { id: docSnap.id, ...data };
+        }
+      });
+      // 2. If not, create it
+      if (!conversation) {
+        // Fetch student's name
+        const studentDoc = await getDoc(getDocRef(db, "users", contactId));
+        const studentName = studentDoc.exists() ? (studentDoc.data().name || studentDoc.data().Name) : "Student";
+        const newConv = await addDoc(collection(db, "conversations"), {
+          participants: [currentUser.id, contactId],
+          participantNames: { [currentUser.id]: currentUser.name, [contactId]: studentName },
+          lastMessage: null,
+        });
+        conversation = { id: newConv.id, participants: [currentUser.id, contactId], participantNames: { [currentUser.id]: currentUser.name, [contactId]: studentName } };
+      }
+      setActiveConversationState(conversation);
+      // Fetch messages for this conversation (implement Firestore fetch here)
+      // setMessages([...]);
+    }
+    openOrCreateConversation();
+  }, [contactId, currentUser]);
+
+  if (contactId && activeConversationState) {
+    // Only show the right chat pane
+    return (
+      <div style={{ display: 'flex', height: '100vh' }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', background: '#fff' }}>
+          {/* Chat header with student's name */}
+          <div style={{ padding: '1.5rem', borderBottom: '1px solid #f3f4f6', fontWeight: 700, fontSize: 22 }}>
+            {activeConversationState.participantNames[contactId] || 'Student'}
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem' }}>
+            {/* Render messages for this conversation */}
+            {Array.isArray(messages) && messages.map((msg: Message) => (
+              <div key={msg.id} style={{ marginBottom: 12, textAlign: msg.isFromTutor ? 'right' : 'left' }}>
+                <div style={{ display: 'inline-block', background: msg.isFromTutor ? '#ff6b6b' : '#f3f4f6', color: msg.isFromTutor ? '#fff' : '#111827', borderRadius: 16, padding: '0.7rem 1.2rem', fontSize: 16 }}>
+                  {msg.text}
+                </div>
+              </div>
+            ))}
+          </div>
+          {/* Message input */}
+          <div style={{ padding: '1rem', borderTop: '1px solid #f3f4f6', background: '#f8fafc' }}>
+            <form onSubmit={e => { e.preventDefault(); handleSendMessage(); }} style={{ display: 'flex', gap: 8 }}>
+              <input
+                type="text"
+                value={messageInput}
+                onChange={e => setMessageInput(e.target.value)}
+                placeholder="Type your message..."
+                style={{ flex: 1, borderRadius: 12, border: '1px solid #e5e7eb', padding: '0.8rem', fontSize: 16 }}
+              />
+              <button type="submit" style={{ background: '#ff6b6b', color: '#fff', border: 'none', borderRadius: 12, padding: '0.8rem 1.5rem', fontWeight: 700, fontSize: 16, cursor: 'pointer' }}>
+                Send
+              </button>
+            </form>
+          </div>
         </div>
       </div>
     );
@@ -590,7 +627,7 @@ export default function TutorDashboard() {
                 </div>
                 <div className={styles.profileInfo}>
                   <h3 className={styles.profileName}>
-                    {userProfile?.Name || tutorProfile?.name || profileData.fullName || 'Tutor Name'}
+                    {tutorProfile?.name || profileData.fullName || 'Tutor Name'}
                   </h3>
                   <p className={styles.profileRole}>
                     {tutorProfile?.email || profileData.email || 'Email'}
@@ -831,7 +868,7 @@ export default function TutorDashboard() {
               </div>
               <div style={{ textAlign: 'right', marginTop: 24 }}>
                 <button onClick={handleSaveProfile} className={styles.primaryButton}>
-                  💾 Save Changes
+                   Save Changes
                 </button>
               </div>
             </div>
@@ -841,19 +878,26 @@ export default function TutorDashboard() {
       {/* Chat Area */}
       {activeView === 'messages' && (
         <div className={styles.chatArea}>
-          {activeStudent && (
+          {activeConversationState && (
             <>
               <div className={styles.chatHeader}>
                 <div className={styles.chatHeaderContent}>
                   <div className={styles.chatAvatar}>
                     <div className={styles.avatarCircle}>
-                      {activeStudent.studentName.split(' ').map(n => n[0]).join('')}
+                      {(contactId && activeConversationState.participantNames && typeof activeConversationState.participantNames[contactId] === 'string')
+                        ? activeConversationState.participantNames[contactId]!.split(' ').map((n: string) => n[0]).join('')
+                        : 'S'}
                     </div>
                   </div>
                   <div className={styles.chatHeaderInfo}>
-                    <h2 className={styles.chatStudentName}>{activeStudent.studentName}</h2>
+                    <h2 className={styles.chatStudentName}>
+                      {(contactId && activeConversationState.participantNames && typeof activeConversationState.participantNames[contactId] === 'string')
+                        ? activeConversationState.participantNames[contactId]
+                        : 'Student'}
+                    </h2>
                     <span className={styles.chatStatus}>
-                      {activeStudent.isOnline ? 'Online' : 'Offline'}
+                      {/* Assuming activeConversationState has an isOnline property */}
+                      {activeConversationState.isOnline ? 'Online' : 'Offline'}
                     </span>
                   </div>
                 </div>
@@ -862,7 +906,7 @@ export default function TutorDashboard() {
                 </div>
               </div>
               <div className={styles.messagesContainer}>
-                {activeMessages.map((message) => (
+                {messages.map((message: Message) => (
                   <div
                     key={message.id}
                     className={`${styles.messageItem} ${message.isFromTutor ? styles.tutorMessage : styles.studentMessage}`}

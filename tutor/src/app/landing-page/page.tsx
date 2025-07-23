@@ -20,6 +20,9 @@ import {
 } from "lucide-react"
 import styles from "../../styles/LandingPage.module.css"
 import { motion } from "framer-motion"
+import TutorCard from "../../components/tutor-card";
+import { initializeApp } from "firebase/app";
+import { getFirestore, collection, getDocs, query, where } from "firebase/firestore";
 
 interface User {
   userType: string;
@@ -347,48 +350,31 @@ function Benefits() {
 
 // Featured Tutors Component
 function FeaturedTutors() {
-  const featuredTutors = [
-    {
-      id: 1,
-      name: "Sarah Johnson",
-      subjects: ["Mathematics", "Physics"],
-      bio: "PhD in Mathematics with 8+ years of teaching experience",
-      rating: 4.9,
-      reviews: 127,
-      hourlyRate: 100,
-      image: "/placeholder.svg?height=80&width=80",
-    },
-    {
-      id: 2,
-      name: "Michael Chen",
-      subjects: ["Computer Science", "Python"],
-      bio: "Software Engineer at Google, specializing in programming",
-      rating: 4.8,
-      reviews: 89,
-      hourlyRate: 200,
-      image: "/placeholder.svg?height=80&width=80",
-    },
-    {
-      id: 3,
-      name: "Emily Rodriguez",
-      subjects: ["Spanish", "French"],
-      bio: "Native speaker with MA in Linguistics and 6 years experience",
-      rating: 5.0,
-      reviews: 156,
-      hourlyRate: 150,
-      image: "/placeholder.svg?height=80&width=80",
-    },
-    {
-      id: 4,
-      name: "David Thompson",
-      subjects: ["Chemistry", "Biology"],
-      bio: "Medical student with extensive science tutoring background",
-      rating: 4.9,
-      reviews: 94,
-      hourlyRate: 300,
-      image: "/placeholder.svg?height=80&width=80",
-    },
-  ]
+  const [tutors, setTutors] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchTutors() {
+      setLoading(true);
+      const firebaseConfig = {
+        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+        measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+      };
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+      const q = query(collection(db, "users"), where("isTutor", "==", true));
+      const querySnapshot = await getDocs(q);
+      const tutorsList = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setTutors(tutorsList.slice(0, 4)); // Show only top 4
+      setLoading(false);
+    }
+    fetchTutors();
+  }, []);
 
   return (
     <motion.section
@@ -406,51 +392,15 @@ function FeaturedTutors() {
             Learn from experienced educators who are passionate about helping you succeed
           </p>
         </div>
-
         <div className={`${styles.grid} ${styles.gridCols4}`}>
-          {featuredTutors.map((tutor, idx) => (
-            <motion.div
-              key={tutor.id}
-              className={`${styles.card} ${styles.textCenter} ${styles.tutorCard}`}
-              initial={{ opacity: 0, y: 40 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: false, amount: 0.2 }}
-              transition={{ duration: 0.6, delay: idx * 0.1 }}
-            >
-              <div className={styles.tutorImageWrapper}>
-                <Image
-                  src={tutor.image || "/assets/images/default-tutor.png"}
-                  alt={tutor.name}
-                  width={80}
-                  height={80}
-                  className={styles.tutorImage}
-                  style={{ objectFit: "cover" }}
-                />
-              </div>
-              <h3 className={styles.tutorName}>{tutor.name}</h3>
-              <div className={styles.tutorSubjects}>
-                {tutor.subjects.map((subject) => (
-                  <span key={subject} className={styles.tutorBadge}>
-                    {subject}
-                  </span>
-                ))}
-              </div>
-              <p className={styles.tutorBio}>{tutor.bio}</p>
-              <div className={styles.tutorMeta}>
-                <div className={styles.rating}>
-                  <Star className={styles.star} />
-                  <span className="font-medium">{tutor.rating}</span>
-                  <span className={styles.textGray}>({tutor.reviews})</span>
-                </div>
-                <span className={styles.tutorRate}>{tutor.hourlyRate}MAD/hr</span>
-              </div>
-              <button className={`${styles.button} ${styles.buttonPrimary} ${styles.buttonFull} ${styles.tutorProfileBtn}`}>
-                View Profile
-              </button>
-            </motion.div>
-          ))}
+          {loading ? (
+            <div>Loading tutors...</div>
+          ) : (
+            tutors.map((tutor, idx) => (
+              <TutorCard key={tutor.id} tutor={tutor} />
+            ))
+          )}
         </div>
-
         <div className={`${styles.textCenter} ${styles.mt12}`}>
           <Link href="/search" className={`${styles.button} ${styles.buttonSecondary} ${styles.buttonLarge}`}>
             View All Tutors
@@ -459,7 +409,7 @@ function FeaturedTutors() {
         </div>
       </div>
     </motion.section>
-  )
+  );
 }
 
 // How It Works Component

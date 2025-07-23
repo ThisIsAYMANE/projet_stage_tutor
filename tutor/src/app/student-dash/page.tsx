@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import styles from '../../styles/TutorDash.module.css';
 import { db } from '../../../firebase';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 
 interface Message {
   id: string;
@@ -32,7 +32,7 @@ interface StudentProfile {
 
 export default function StudentDashboard() {
   const [activeView, setActiveView] = useState<'messages' | 'profile'>('messages');
-  const [activeConversation, setActiveConversation] = useState<string>('alex');
+  const [activeConversation, setActiveConversation] = useState<string>('');
   const [messageInput, setMessageInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,56 +42,15 @@ export default function StudentDashboard() {
   const [studentProfile, setStudentProfile] = useState<StudentProfile | null>(null);
   const [userProfile, setUserProfile] = useState<{ Name?: string, email?: string, phone?: string, profilePicture?: string } | null>(null);
 
-  // Mock conversations and messages
-  const conversations: Conversation[] = [
-    {
-      id: 'alex',
-      tutorName: 'Alex Smith',
-      lastMessage: 'See you at 5pm for the session!',
-      timestamp: '5m ago',
-      isOnline: true,
-      unreadCount: 1
-    },
-    {
-      id: 'linda',
-      tutorName: 'Linda Brown',
-      lastMessage: 'Don’t forget to review chapter 3.',
-      timestamp: '2h ago',
-      isOnline: false,
-      unreadCount: 0
-    }
-  ];
+  // Real conversations and messages
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [resolvedTutorName, setResolvedTutorName] = useState<string | null>(null);
+  const [resolvedTutorNames, setResolvedTutorNames] = useState<{ [emailOrId: string]: string }>({});
 
-  const messages: Record<string, Message[]> = {
-    alex: [
-      {
-        id: '1',
-        text: 'Hi Alex! Looking forward to our session.',
-        timestamp: '10:00 AM',
-        isFromStudent: true
-      },
-      {
-        id: '2',
-        text: 'Me too! See you at 5pm.',
-        timestamp: '10:01 AM',
-        isFromStudent: false
-      }
-    ],
-    linda: [
-      {
-        id: '1',
-        text: 'Don’t forget to review chapter 3.',
-        timestamp: '8:00 AM',
-        isFromStudent: false
-      }
-    ]
-  };
-
-  const activeTutor = conversations.find(c => c.id === activeConversation);
-  const activeMessages = messages[activeConversation] || [];
-
+  // Fetch student profile and conversations on mount
   useEffect(() => {
-    const fetchStudentProfile = async () => {
+    const fetchStudentProfileAndConversations = async () => {
       try {
         setLoading(true);
         setError(null);
@@ -123,28 +82,125 @@ export default function StudentDashboard() {
           setStudentProfile({
             Name: data.Name || '',
             email: data.email || '',
-            phone: data.phone || '', // If phone is not present, fallback to empty string
-            bio: '', // No bio in your structure, leave empty or add if you want
+            phone: data.phone || '',
+            bio: '',
             picture: data.profilePicture || '',
             createdAt: data.createdAt ? (typeof data.createdAt === 'string' ? data.createdAt : data.createdAt.toDate().toLocaleDateString()) : '',
           });
         } else {
           setError('Student profile not found.');
         }
+        // Fetch conversations for this student
+        const convQuery = query(
+          collection(db, 'conversations'),
+          where('participants', 'array-contains', user.email),
+          orderBy('lastMessageTimestamp', 'desc')
+        );
+        const convSnap = await getDocs(convQuery);
+        const convs: Conversation[] = [];
+        const nameResolutions: { [emailOrId: string]: string } = {};
+        for (const docSnap of convSnap.docs) {
+          const data = docSnap.data();
+          // Find the tutor's email/ID (the other participant)
+          const tutorEmailOrId = (data.participants || []).find((p: string) => p !== user.email);
+          let tutorName = data.tutorName || tutorEmailOrId || 'Tutor';
+          // If tutorName looks like an email, try to resolve real name
+          if (tutorName && tutorName.includes('@')) {
+            if (resolvedTutorNames[tutorEmailOrId]) {
+              tutorName = resolvedTutorNames[tutorEmailOrId];
+            } else {
+              try {
+                const tutorDocRef = doc(db, 'users', tutorEmailOrId.replace(/[^a-zA-Z0-9]/g, ''));
+                const tutorDocSnap = await getDoc(tutorDocRef);
+                if (tutorDocSnap.exists()) {
+                  const tData = tutorDocSnap.data();
+                  tutorName = tData.Name || tData.name || tutorName;
+                  nameResolutions[tutorEmailOrId] = tutorName;
+                }
+              } catch {}
+            }
+          }
+          convs.push({
+            id: docSnap.id,
+            tutorName,
+            lastMessage: data.lastMessage || '',
+            timestamp: data.lastMessageTimestamp ? (typeof data.lastMessageTimestamp === 'string' ? data.lastMessageTimestamp : data.lastMessageTimestamp.toDate().toLocaleTimeString()) : '',
+            isOnline: false, // You can implement online status if you track it
+            unreadCount: data.unreadCount && data.unreadCount[userId] ? data.unreadCount[userId] : 0
+          });
+        }
+        if (Object.keys(nameResolutions).length > 0) {
+          setResolvedTutorNames(prev => ({ ...prev, ...nameResolutions }));
+        }
+        setConversations(convs);
+        // Set first conversation as active by default
+        if (convs.length > 0) {
+          setActiveConversation(convs[0].id);
+        }
       } catch (err) {
-        console.error('Error fetching student profile:', err);
-        setError('Failed to load profile data. Please try again.');
+        console.error('Error fetching student profile or conversations:', err);
+        setError('Failed to load profile or conversations. Please try again.');
       } finally {
         setLoading(false);
       }
     };
-    fetchStudentProfile();
+    fetchStudentProfileAndConversations();
   }, []);
 
-  const handleSendMessage = () => {
-    if (messageInput.trim()) {
-      // Here you would typically send the message to your backend
-      setMessageInput('');
+  // Fetch messages for the active conversation
+  useEffect(() => {
+    if (!activeConversation) return;
+    setMessages([]);
+    setLoading(true);
+    const unsub = onSnapshot(
+      collection(db, 'conversations', activeConversation, 'messages'),
+      (querySnapshot) => {
+        const msgs: Message[] = [];
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          msgs.push({
+            id: docSnap.id,
+            text: data.text,
+            timestamp: data.timestamp ? (typeof data.timestamp === 'string' ? data.timestamp : data.timestamp.toDate().toLocaleTimeString()) : '',
+            isFromStudent: data.senderRole === 'student',
+          });
+        });
+        setMessages(msgs.sort((a, b) => (a.timestamp > b.timestamp ? 1 : -1)));
+        setLoading(false);
+      },
+      (err) => {
+        setError('Failed to load messages.');
+        setLoading(false);
+      }
+    );
+    return () => unsub();
+  }, [activeConversation]);
+
+  const handleSendMessage = async () => {
+    if (messageInput.trim() && activeConversation) {
+      try {
+        const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+        // Add message to Firestore
+        await addDoc(
+          collection(db, 'conversations', activeConversation, 'messages'),
+          {
+            text: messageInput.trim(),
+            timestamp: serverTimestamp(),
+            senderRole: 'student',
+            senderEmail: user.email,
+          }
+        );
+        // Update lastMessage and lastMessageTimestamp in conversation doc
+        await updateDoc(doc(db, 'conversations', activeConversation), {
+          lastMessage: messageInput.trim(),
+          lastMessageTimestamp: serverTimestamp(),
+        });
+        setMessageInput('');
+      } catch (err) {
+        // Optionally handle error
+      }
     }
   };
 
@@ -154,6 +210,35 @@ export default function StudentDashboard() {
       handleSendMessage();
     }
   };
+
+  const activeTutor = conversations.find((c) => c.id === activeConversation);
+  const activeMessages = messages;
+
+  // Move this useEffect up, before any return
+  useEffect(() => {
+    // If the active tutor's name looks like an email, fetch the real name from Firestore
+    const fetchTutorName = async () => {
+      if (!activeTutor) {
+        setResolvedTutorName(null);
+        return;
+      }
+      const name = activeTutor.tutorName;
+      if (name && name.includes('@')) {
+        // Try to fetch from users collection
+        try {
+          const userDocRef = doc(db, 'users', name.replace(/[^a-zA-Z0-9]/g, ''));
+          const userDocSnap = await getDoc(userDocRef);
+          if (userDocSnap.exists()) {
+            const data = userDocSnap.data();
+            setResolvedTutorName(data.Name || data.name || name);
+            return;
+          }
+        } catch {}
+      }
+      setResolvedTutorName(name);
+    };
+    fetchTutorName();
+  }, [activeTutor]);
 
   if (loading) {
     return (
@@ -165,6 +250,7 @@ export default function StudentDashboard() {
     );
   }
 
+  // Only show error if there was a real fetch error, not just no conversations
   if (error) {
     return (
       <div className={styles.container}>
@@ -273,30 +359,36 @@ export default function StudentDashboard() {
                   className={styles.conversationsSearchInput}
                 />
               </div>
-              {conversations.map((conversation) => (
-                <div
-                  key={conversation.id}
-                  className={`${styles.conversationItem} ${activeConversation === conversation.id ? styles.activeConversation : ''}`}
-                  onClick={() => setActiveConversation(conversation.id)}
-                >
-                  <div className={styles.conversationAvatar}>
-                    <div className={styles.avatarCircle}>
-                      {conversation.tutorName.split(' ').map(n => n[0]).join('')}
-                    </div>
-                    {conversation.isOnline && <div className={styles.onlineStatus}></div>}
-                  </div>
-                  <div className={styles.conversationContent}>
-                    <div className={styles.conversationHeader}>
-                      <h3 className={styles.studentName}>{conversation.tutorName}</h3>
-                      <span className={styles.timestamp}>{conversation.timestamp}</span>
-                    </div>
-                    <p className={styles.lastMessage}>{conversation.lastMessage}</p>
-                  </div>
-                  {conversation.unreadCount > 0 && (
-                    <div className={styles.unreadBadge}>{conversation.unreadCount}</div>
-                  )}
+              {conversations.length === 0 ? (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                  No conversations yet. Start a new chat!
                 </div>
-              ))}
+              ) : (
+                conversations.map((conversation) => (
+                  <div
+                    key={conversation.id}
+                    className={`${styles.conversationItem} ${activeConversation === conversation.id ? styles.activeConversation : ''}`}
+                    onClick={() => setActiveConversation(conversation.id)}
+                  >
+                    <div className={styles.conversationAvatar}>
+                      <div className={styles.avatarCircle}>
+                        {conversation.tutorName.split(' ').map((n: string) => n[0]).join('')}
+                      </div>
+                      {conversation.isOnline && <div className={styles.onlineStatus}></div>}
+                    </div>
+                    <div className={styles.conversationContent}>
+                      <div className={styles.conversationHeader}>
+                        <h3 className={styles.studentName}>{conversation.tutorName}</h3>
+                        <span className={styles.timestamp}>{conversation.timestamp}</span>
+                      </div>
+                      <p className={styles.lastMessage}>{conversation.lastMessage}</p>
+                    </div>
+                    {conversation.unreadCount > 0 && (
+                      <div className={styles.unreadBadge}>{conversation.unreadCount}</div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
           </>
         )}
@@ -346,19 +438,19 @@ export default function StudentDashboard() {
       {/* Chat Area */}
       {activeView === 'messages' && (
         <div className={styles.chatArea}>
-          {activeTutor && (
+          {activeTutor ? (
             <>
               <div className={styles.chatHeader}>
                 <div className={styles.chatHeaderContent}>
                   <div className={styles.chatAvatar}>
                     <div className={styles.avatarCircle}>
-                      {activeTutor.tutorName.split(' ').map(n => n[0]).join('')}
+                      {activeTutor && activeTutor.tutorName.split(' ').map((n: string) => n[0]).join('')}
                     </div>
                   </div>
                   <div className={styles.chatHeaderInfo}>
-                    <h2 className={styles.chatStudentName}>{activeTutor.tutorName}</h2>
+                    <h2 className={styles.chatStudentName}>{resolvedTutorName || (activeTutor ? activeTutor.tutorName : '')}</h2>
                     <span className={styles.chatStatus}>
-                      {activeTutor.isOnline ? 'Online' : 'Offline'}
+                      {activeTutor && activeTutor.isOnline ? 'Online' : 'Offline'}
                     </span>
                   </div>
                 </div>
@@ -367,7 +459,7 @@ export default function StudentDashboard() {
                 </div>
               </div>
               <div className={styles.messagesContainer}>
-                {activeMessages.map((message) => (
+                 {activeMessages.map((message) => (
                   <div
                     key={message.id}
                     className={`${styles.messageItem} ${message.isFromStudent ? styles.tutorMessage : styles.studentMessage}`}
@@ -397,6 +489,10 @@ export default function StudentDashboard() {
                 </button>
               </div>
             </>
+          ) : (
+            <div style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+              Select a conversation or start a new chat to begin messaging.
+            </div>
           )}
         </div>
       )}

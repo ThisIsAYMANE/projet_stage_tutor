@@ -18,6 +18,8 @@ import {
   SlidersHorizontal,
 } from "lucide-react"
 import styles from "../../styles/SearchPage.module.css"
+import { collection, getDocs, query, where } from "firebase/firestore";
+import { db } from "../../../firebase";
 
 // Type definitions
 interface Option {
@@ -69,7 +71,7 @@ interface FilterBarProps {
 }
 
 interface Tutor {
-  id: number
+  id: string
   name: string
   flag: string
   nativeFlag: string
@@ -859,7 +861,7 @@ export default function SearchPage() {
   const [searchQuery, setSearchQuery] = useState("")
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
   const [filters, setFilters] = useState<Filters>({
-    subject: "English",
+    subject: "Any",
     hourlyRate: [3, 100],
     experience: "any",
     isVerified: false,
@@ -869,114 +871,74 @@ export default function SearchPage() {
     sortBy: "Our top picks",
   })
 
-  // Mock tutor data
-  const [tutors] = useState<Tutor[]>([
-    {
-      id: 1,
-      name: "Larry B.",
-      flag: "🇺🇸",
-      nativeFlag: "🇮🇹",
-      isNative: true,
-      subject: "English",
-      rating: 5,
-      reviews: 18,
-      price: 15,
-      activeStudents: 23,
-      totalLessons: 263,
-      languages: ["English (Proficient)", "Italian (Native)", "+4"],
-      description:
-        "Cambridge-Certified/ British School International Tutor with many years of experience — Hi! I'm a full-time English tutor with a CELTA certification",
-      isProfessional: true,
-      isSuperTutor: true,
-      isOnline: true,
-      hasVideo: true,
-      image: "/placeholder.svg?height=120&width=120",
-    },
-    {
-      id: 2,
-      name: "Oumaima H.",
-      flag: "🇲🇦",
-      nativeFlag: "",
-      isNative: false,
-      subject: "English",
-      rating: 5,
-      reviews: 44,
-      price: 20,
-      activeStudents: 34,
-      totalLessons: 4808,
-      languages: ["English (Proficient)", "Urdu (Advanced)", "+6"],
-      description:
-        "ESL certified tutor with 4 years of experience — Hello preply people! Greetings from Morocco! My name is Oumaima. I'm 27 years old. I'm a TEFL",
-      isProfessional: false,
-      isSuperTutor: false,
-      isOnline: false,
-      hasVideo: false,
-      image: "/placeholder.svg?height=120&width=120",
-    },
-    // Add more tutors as needed...
-  ])
+  // Fetch tutors from Firestore
+  const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const [filteredTutors, setFilteredTutors] = useState<Tutor[]>(tutors)
+  useEffect(() => {
+    const fetchTutors = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const q = query(collection(db, "users"), where("isTutor", "==", true));
+        const snapshot = await getDocs(q);
+        const tutorsData: Tutor[] = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.Name || data.name || "Unknown",
+            flag: data.flag || "",
+            nativeFlag: data.nativeFlag || "",
+            isNative: data.isNative || false,
+            subject: data.subjects?.[0] || "",
+            rating: data.averageRating || 0,
+            reviews: data.totalReviews || 0,
+            price: data.hourlyRate || 0,
+            activeStudents: data.activeStudents || 0,
+            totalLessons: data.totalLessons || 0,
+            languages: data.languages || [],
+            description: data.bio || "",
+            isProfessional: data.isVerified || false,
+            isSuperTutor: data.isSuperTutor || false,
+            isOnline: data.isOnline || false,
+            hasVideo: false,
+            image: data.profilePicture || "",
+          };
+        });
+        setTutors(tutorsData);
+      } catch (err) {
+        setError("Failed to load tutors.");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTutors();
+  }, []);
+
+  const [filteredTutors, setFilteredTutors] = useState<Tutor[]>([])
+
+  useEffect(() => {
+    setFilteredTutors(tutors);
+  }, [searchQuery, filters, tutors])
 
   const handleFilterChange = (key: keyof Filters, value: any) => {
     setFilters((prev) => ({
       ...prev,
       [key]: value,
-    }))
-  }
+    }));
+  };
 
   const handleSearchChange = (value: string) => {
-    setSearchQuery(value)
+    setSearchQuery(value);
+  };
+
+  if (loading) {
+    return <div className={styles.container}><Header /><div style={{padding: 40, textAlign: 'center'}}>Loading tutors...</div></div>;
   }
-
-  // Filter tutors based on search and filters
-  useEffect(() => {
-    let filtered = tutors
-
-    // Apply sophisticated filtering logic here
-    if (searchQuery) {
-      filtered = filtered.filter(
-        (tutor) =>
-          tutor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          tutor.description.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    }
-
-    // Hourly rate filter
-    filtered = filtered.filter((tutor) => tutor.price >= filters.hourlyRate[0] && tutor.price <= filters.hourlyRate[1])
-
-    // Availability filter
-    if (filters.isAvailable) {
-      filtered = filtered.filter((tutor) => tutor.isOnline)
-    }
-
-    // Verification filter
-    if (filters.isVerified) {
-      filtered = filtered.filter((tutor) => tutor.isProfessional)
-    }
-
-    // Experience filter
-    if (filters.experience !== "any") {
-      // This would need to be implemented based on actual experience data
-      // For now, we'll filter by total lessons as a proxy
-      const minLessons = filters.experience === "1+" ? 50 : filters.experience === "3+" ? 150 : 300
-      filtered = filtered.filter((tutor) => tutor.totalLessons >= minLessons)
-    }
-
-    // Rating filter
-    if (filters.averageRating > 0) {
-      filtered = filtered.filter((tutor) => tutor.rating >= filters.averageRating)
-    }
-
-    // Reviews filter
-    if (filters.totalReviews > 0) {
-      filtered = filtered.filter((tutor) => tutor.reviews >= filters.totalReviews)
-    }
-
-    // Add more filtering logic based on other filters...
-
-    setFilteredTutors(filtered)
-  }, [searchQuery, filters, tutors])
+  if (error) {
+    return <div className={styles.container}><Header /><div style={{padding: 40, textAlign: 'center', color: 'red'}}>{error}</div></div>;
+  }
 
   return (
     <div className={styles.container}>
@@ -1010,7 +972,7 @@ export default function SearchPage() {
       <section className={styles.resultsSection}>
         <div className={styles.sectionContent}>
           <h2 className={styles.resultsTitle}>
-            {filteredTutors.length.toLocaleString()} English teachers that match your needs
+            {filteredTutors.length.toLocaleString()} {filters.subject === "Any" ? "tutors" : `${filters.subject} teachers`} that match your needs
           </h2>
 
           <div className={styles.tutorGrid}>

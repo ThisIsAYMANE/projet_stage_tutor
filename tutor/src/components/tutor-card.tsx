@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-
+import styles from "../styles/LandingPage.module.css";
 interface TutorCardProps {
   tutor: any;
 }
@@ -52,21 +52,21 @@ const TutorCard: React.FC<TutorCardProps> = ({ tutor }) => {
         <span style={{ color: "#e11d48", fontWeight: 700, fontSize: "1.1rem" }}>{hourlyRate}</span>
       </div>
       <Link href={`/tutor/${id}`} style={{ width: "100%", textDecoration: "none" }}>
-        <button style={{
-          width: "100%",
-          background: "#e11d48",
-          color: "#fff",
-          border: "none",
-          borderRadius: "14px",
-          padding: "0.9rem 0",
-          fontWeight: 700,
-          fontSize: "1.1rem",
-          cursor: "pointer",
-          marginTop: "0.5rem"
-        }}>
-          View Profile
-        </button>
-      </Link>
+  <button className={styles.viewProfile} style={{
+    width: "100%",
+    background: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
+    color: "#fff",
+    border: "none",
+    borderRadius: "14px",
+    padding: "0.9rem 0",
+    fontWeight: 700,
+    fontSize: "1.1rem",
+    cursor: "pointer",
+    marginTop: "0.5rem"
+  }}>
+    View Profile
+  </button>
+</Link>
     </div>
   );
 };

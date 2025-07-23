@@ -576,16 +576,10 @@ function Header() {
 // Enhanced Filter Bar Component
 function FilterBar({ filters, onFilterChange, searchQuery, onSearchChange, onOpenAdvancedFilters }: FilterBarProps) {
   const subjects = [
-    "English",
-    "Spanish",
-    "French",
-    "German",
-    "Chinese",
-    "Japanese",
-    "Italian",
-    "Portuguese",
-    "Russian",
-    "Arabic",
+    'Mathematics', 'Physics', 'Chemistry', 'Biology', 'English', 'French', 'Arabic',
+    'History', 'Geography', 'Computer Science', 'Economics', 'Philosophy', 'Music',
+    'Art', 'Physical Education', 'Business', 'Accounting', 'Statistics', 'Programming',
+    'Engineering', 'Literature'
   ];
   const languages = [
     "English",
@@ -611,11 +605,11 @@ function FilterBar({ filters, onFilterChange, searchQuery, onSearchChange, onOpe
     { label: "5 stars", value: 5 }
   ];
   const quickPriceRanges = [
-    { label: "$3 - $40+", value: [3, 40] as [number, number] },
-    { label: "$5 - $15", value: [5, 15] as [number, number] },
-    { label: "$15 - $25", value: [15, 25] as [number, number] },
-    { label: "$25 - $40", value: [25, 40] as [number, number] },
-    { label: "$40+", value: [40, 100] as [number, number] },
+    { label: "30DH - 50DH", value: [3, 40] as [number, number] },
+    { label: "60DH - 80DH", value: [5, 15] as [number, number] },
+    { label: "90DH - 120DH", value: [15, 25] as [number, number] },
+    { label: "130DH - 150DH", value: [25, 40] as [number, number] },
+    { label: "+150DH", value: [40, 100] as [number, number] },
   ];
 
   // Add new filter states for language, location, teaching methods, and rating

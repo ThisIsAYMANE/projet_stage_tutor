@@ -7,6 +7,7 @@ import { doc, setDoc, getDoc, serverTimestamp, onSnapshot, updateDoc } from 'fir
 import { useSearchParams } from "next/navigation";
 import { getFirestore, collection, query, where, getDocs, addDoc, doc as getDocRef, orderBy } from "firebase/firestore";
 import app from '../../../firebase';
+import { Calendar, Clock, User, BadgeCheck } from "lucide-react";
 
 interface Message {
   id: string;
@@ -45,11 +46,74 @@ interface TutorProfile {
   updatedAt: string;
 }
 
+interface LessonCardProps {
+  lesson: any;
+  isTutor: boolean;
+}
+function LessonCard({ lesson, isTutor }: LessonCardProps) {
+  return (
+    <div style={{
+      border: "1px solid #eee",
+      borderRadius: 12,
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+      padding: "1.2rem 1.5rem",
+      marginBottom: 18,
+      background: "#fff",
+      display: "flex",
+      flexDirection: "column",
+      gap: 8,
+      maxWidth: 420
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <Calendar style={{ color: "#db2777" }} size={20} />
+        <span style={{ fontWeight: 600 }}>{lesson.date}</span>
+        <Clock style={{ color: "#db2777" }} size={20} />
+        <span style={{ fontWeight: 600 }}>{lesson.time}</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <User style={{ color: "#2563eb" }} size={18} />
+        <span>
+          {isTutor ? (
+            <>Student: <b>{lesson.studentName}</b></>
+          ) : (
+            <>Tutor: <b>{lesson.tutorName}</b></>
+          )}
+        </span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <BadgeCheck style={{ color: lesson.status === "booked" ? "#22c55e" : "#f87171" }} size={18} />
+        <span style={{
+          color: lesson.status === "booked" ? "#22c55e" : "#f87171",
+          fontWeight: 600,
+          background: lesson.status === "booked" ? "#dcfce7" : "#fee2e2",
+          borderRadius: 8,
+          padding: "2px 10px"
+        }}>
+          {lesson.status.charAt(0).toUpperCase() + lesson.status.slice(1)}
+        </span>
+      </div>
+      {lesson.message && (
+        <div style={{
+          background: "#f3f4f6",
+          borderRadius: 8,
+          padding: "8px 12px",
+          marginTop: 6,
+          fontSize: 14,
+          color: "#555"
+        }}>
+          <b>Message:</b> {lesson.message}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function TutorDashboard() {
-  // All hooks at the top, in a single block, before any logic or returns
-  const searchParams = useSearchParams();
+  // All hooks at the top, before any logic or return
+  const searchParams = useSearchParams() ?? { get: () => undefined };
   const contactId = typeof window !== 'undefined' && searchParams ? searchParams.get("contactId") : null;
-  const [activeView, setActiveView] = useState<'messages' | 'announcement' | 'profile'>('messages');
+  const initialTab = searchParams.get('tab') || 'messages';
+  const [activeView, setActiveView] = useState<'messages' | 'announcement' | 'profile' | 'lessons'>(initialTab as any);
   const [activeConversation, setActiveConversation] = useState<string>('sarah');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,6 +130,8 @@ export default function TutorDashboard() {
   const [messageInput, setMessageInput] = useState('');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const [activeConversationState, setActiveConversationState] = useState<any>(null);
+  const [lessons, setLessons] = useState<any[]>([]);
+  const [tutorFullProfile, setTutorFullProfile] = useState<any>(null);
 
   // Add options for dropdowns/multi-selects
   const subjectOptions: string[] = [
@@ -80,7 +146,6 @@ export default function TutorDashboard() {
   ];
 
   // All useEffect hooks here, before any logic or returns
-  // Fetch tutor conversations on mount
   useEffect(() => {
     const fetchConversations = async () => {
       try {
@@ -153,7 +218,6 @@ export default function TutorDashboard() {
     fetchConversations();
   }, []);
 
-  // Fetch messages for the active conversation
   useEffect(() => {
     if (!activeConversation) return;
     setMessages([]);
@@ -182,7 +246,112 @@ export default function TutorDashboard() {
     return () => unsub();
   }, [activeConversation]);
 
-  // Send message
+  useEffect(() => {
+    if (activeView === 'lessons') {
+      const fetchLessons = async () => {
+        const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+        const db = getFirestore();
+        const q = query(collection(db, 'lessons'), where('tutorId', '==', user.id || user.email));
+        const snapshot = await getDocs(q);
+        const lessonsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setLessons(lessonsData);
+      };
+      fetchLessons();
+    }
+  }, [activeView]);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userStr = localStorage.getItem("user");
+      if (userStr) setCurrentUser(JSON.parse(userStr));
+    }
+  }, []);
+
+  useEffect(() => {
+    async function openOrCreateConversation() {
+      if (!contactId || !currentUser) return;
+      // 1. Check if conversation exists
+      const q = query(
+        collection(db, "conversations"),
+        where("participants", "array-contains", currentUser.id)
+      );
+      const snapshot = await getDocs(q);
+      let conversation: any = null;
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
+        if (data.participants.includes(contactId)) {
+          conversation = { id: docSnap.id, ...data };
+        }
+      });
+      // 2. If not, create it
+      if (!conversation) {
+        // Fetch student's name
+        const studentDoc = await getDoc(getDocRef(db, "users", contactId));
+        const studentName = studentDoc.exists() ? (studentDoc.data().name || studentDoc.data().Name) : "Student";
+        const newConv = await addDoc(collection(db, "conversations"), {
+          participants: [currentUser.id, contactId],
+          participantNames: { [currentUser.id]: currentUser.name, [contactId]: studentName },
+          lastMessage: null,
+        });
+        conversation = { id: newConv.id, participants: [currentUser.id, contactId], participantNames: { [currentUser.id]: currentUser.name, [contactId]: studentName } };
+      }
+      setActiveConversationState(conversation);
+      // Fetch messages for this conversation (implement Firestore fetch here)
+      // setMessages([...]);
+    }
+    openOrCreateConversation();
+  }, [contactId, currentUser]);
+
+  // Fetch and merge main user doc and tutorProfile/profile subdoc for the logged-in tutor
+  useEffect(() => {
+    const fetchTutorProfile = async () => {
+      const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+      if (!userStr) return;
+      const user = JSON.parse(userStr);
+      const userId = user.id || user.email.replace(/[^a-zA-Z0-9]/g, '');
+      const db = getFirestore();
+      // Fetch main user doc
+      const userDocRef = doc(db, 'users', userId);
+      const userDocSnap = await getDoc(userDocRef);
+      let mainData = userDocSnap.exists() ? userDocSnap.data() : {};
+      // Fetch tutorProfile/profile subdoc
+      let profileData = {};
+      try {
+        const profileDocRef = doc(db, 'users', userId, 'tutorProfile', 'profile');
+        const profileDocSnap = await getDoc(profileDocRef);
+        if (profileDocSnap.exists()) {
+          profileData = profileDocSnap.data();
+        }
+      } catch (e) {}
+      setTutorFullProfile({ name: mainData.Name || profileData.name || 'Unknown', ...mainData, ...profileData });
+    };
+    fetchTutorProfile();
+  }, []);
+
+  // Only after all hooks, handle loading/error returns
+  if (loading) {
+    return (
+      <div className={styles.container}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+          <div>Loading your profile...</div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className={styles.container}>
+        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
+          <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>
+          <button onClick={() => window.location.href = '/auth/login'}>Go to Login</button>
+        </div>
+      </div>
+    );
+  }
+
   const handleSendMessage = async () => {
     if (messageInput.trim() && activeConversation) {
       try {
@@ -304,69 +473,6 @@ export default function TutorDashboard() {
     // Save as draft logic
   };
 
-  if (loading) {
-    return (
-      <div className={styles.container}>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-          <div>Loading your profile...</div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className={styles.container}>
-        <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', flexDirection: 'column' }}>
-          <div style={{ color: 'red', marginBottom: '1rem' }}>{error}</div>
-          <button onClick={() => window.location.href = '/auth/login'}>Go to Login</button>
-        </div>
-      </div>
-    );
-  }
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const userStr = localStorage.getItem("user");
-      if (userStr) setCurrentUser(JSON.parse(userStr));
-    }
-  }, []);
-
-  useEffect(() => {
-    async function openOrCreateConversation() {
-      if (!contactId || !currentUser) return;
-      // 1. Check if conversation exists
-      const q = query(
-        collection(db, "conversations"),
-        where("participants", "array-contains", currentUser.id)
-      );
-      const snapshot = await getDocs(q);
-      let conversation: any = null;
-      snapshot.forEach(docSnap => {
-        const data = docSnap.data();
-        if (data.participants.includes(contactId)) {
-          conversation = { id: docSnap.id, ...data };
-        }
-      });
-      // 2. If not, create it
-      if (!conversation) {
-        // Fetch student's name
-        const studentDoc = await getDoc(getDocRef(db, "users", contactId));
-        const studentName = studentDoc.exists() ? (studentDoc.data().name || studentDoc.data().Name) : "Student";
-        const newConv = await addDoc(collection(db, "conversations"), {
-          participants: [currentUser.id, contactId],
-          participantNames: { [currentUser.id]: currentUser.name, [contactId]: studentName },
-          lastMessage: null,
-        });
-        conversation = { id: newConv.id, participants: [currentUser.id, contactId], participantNames: { [currentUser.id]: currentUser.name, [contactId]: studentName } };
-      }
-      setActiveConversationState(conversation);
-      // Fetch messages for this conversation (implement Firestore fetch here)
-      // setMessages([...]);
-    }
-    openOrCreateConversation();
-  }, [contactId, currentUser]);
-
   if (contactId && activeConversationState) {
     // Only show the right chat pane
     return (
@@ -429,6 +535,7 @@ export default function TutorDashboard() {
             <div className={styles.dropdownItem} onClick={() => { setActiveView('messages'); setMenuOpen(false); }}>Messages</div>
             <div className={styles.dropdownItem} onClick={() => { setActiveView('announcement'); setMenuOpen(false); }}>Add Announcement</div>
             <div className={styles.dropdownItem} onClick={() => { setActiveView('profile'); setMenuOpen(false); }}>Edit Profile</div>
+            <div className={styles.dropdownItem} onClick={() => { setActiveView('lessons'); setMenuOpen(false); }}>Lessons</div>
             <div className={styles.dropdownItem}>Logout</div>
           </div>
         )}
@@ -470,6 +577,10 @@ export default function TutorDashboard() {
             <span className={styles.navIcon}>👤</span>
             Edit Profile
           </div>
+          <div className={styles.navItem + ' ' + (activeView === 'lessons' ? styles.active : '')} onClick={() => setActiveView('lessons')}>
+            <span className={styles.navIcon}>📅</span>
+            Lessons
+          </div>
         </nav>
         <div className={styles.logout}>
           <div className={styles.navItem} onClick={() => {
@@ -482,21 +593,21 @@ export default function TutorDashboard() {
         </div>
         <div className={styles.userInfo}>
           <div className={styles.userAvatar}>
-            {tutorProfile?.picture ? (
+            {tutorFullProfile?.profilePicture ? (
               <img 
-                src={tutorProfile.picture} 
+                src={tutorFullProfile.profilePicture} 
                 alt="Profile" 
                 style={{ width: '100%', height: '100%', borderRadius: '50%', objectFit: 'cover' }}
               />
             ) : (
               <div style={{ width: '100%', height: '100%', borderRadius: '50%', backgroundColor: '#e0e0e0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {tutorProfile?.name ? tutorProfile.name.split(' ').map(n => n[0]).join('') : 'T'}
+                {tutorFullProfile?.name ? tutorFullProfile.name.split(' ').map((n: string) => n[0]).join('') : 'T'}
               </div>
             )}
             <div className={styles.onlineIndicator}></div>
           </div>
           <div className={styles.userDetails}>
-            <div className={styles.userName}>{tutorProfile?.name || 'Tutor'}</div>
+            <div className={styles.userName}>{tutorFullProfile?.name || 'Tutor'}</div>
             <div className={styles.userRole}>Tutor</div>
           </div>
         </div>
@@ -527,7 +638,7 @@ export default function TutorDashboard() {
                 >
                   <div className={styles.conversationAvatar}>
                     <div className={styles.avatarCircle}>
-                      {conversation.studentName.split(' ').map(n => n[0]).join('')}
+                      {conversation.studentName.split(' ').map((n: string) => n[0]).join('')}
                     </div>
                     {conversation.isOnline && <div className={styles.onlineStatus}></div>}
                   </div>
@@ -613,26 +724,26 @@ export default function TutorDashboard() {
               <p className={styles.profileSubtitle}>Manage your account information and preferences</p>
               <div className={styles.profilePictureSection}>
                 <div className={styles.profileAvatar}>
-                  {tutorProfile?.picture ? (
+                  {tutorFullProfile?.profilePicture ? (
                     <img 
-                      src={tutorProfile.picture} 
+                      src={tutorFullProfile.profilePicture} 
                       alt="Profile" 
                       className={styles.profileAvatarImg}
                     />
                   ) : (
                     <span className={styles.profileAvatarFallback}>
-                      {tutorProfile?.name ? tutorProfile.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'T'}
+                      {tutorFullProfile?.name ? tutorFullProfile.name.split(' ').map((n: string) => n[0]).join('').toUpperCase() : 'T'}
                     </span>
                   )}
                 </div>
                 <div className={styles.profileInfo}>
                   <h3 className={styles.profileName}>
-                    {tutorProfile?.name || profileData.fullName || 'Tutor Name'}
+                    {tutorFullProfile?.name || profileData.fullName || 'Tutor Name'}
                   </h3>
                   <p className={styles.profileRole}>
-                    {tutorProfile?.email || profileData.email || 'Email'}
+                    {tutorFullProfile?.email || profileData.email || 'Email'}
                   </p>
-                  {tutorProfile?.isVerified && (
+                  {tutorFullProfile?.isVerified && (
                     <span style={{ color: '#4caf50', fontSize: '0.8rem' }}>✓ Verified</span>
                   )}
                 </div>
@@ -644,27 +755,27 @@ export default function TutorDashboard() {
               <h2 className={styles.sectionTitle}>Profile Overview</h2>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
                 <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
-                  <strong>Subjects:</strong> {tutorProfile?.subjects?.join(', ') || 'Not specified'}
+                  <strong>Subjects:</strong> {tutorFullProfile?.subjects?.join(', ') || 'Not specified'}
                 </div>
                 <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
-                  <strong>Languages:</strong> {tutorProfile?.languages?.join(', ') || 'Not specified'}
+                  <strong>Languages:</strong> {tutorFullProfile?.languages?.join(', ') || 'Not specified'}
                 </div>
                 <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
-                  <strong>Location:</strong> {tutorProfile?.location || 'Not specified'}
+                  <strong>Location:</strong> {tutorFullProfile?.location || 'Not specified'}
                 </div>
                 <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
-                  <strong>Hourly Rate:</strong> {tutorProfile?.hourlyRate ? `${tutorProfile.hourlyRate} MAD` : 'Not specified'}
+                  <strong>Hourly Rate:</strong> {tutorFullProfile?.hourlyRate ? `${tutorFullProfile.hourlyRate} MAD` : 'Not specified'}
                 </div>
                 <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
-                  <strong>Teaching Methods:</strong> {tutorProfile?.teachingMethods?.join(', ') || 'Not specified'}
+                  <strong>Teaching Methods:</strong> {tutorFullProfile?.teachingMethods?.join(', ') || 'Not specified'}
                 </div>
                 <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px' }}>
-                  <strong>Rating:</strong> {tutorProfile?.averageRating ? `${tutorProfile.averageRating}/5 (${tutorProfile.totalReviews} reviews)` : 'No reviews yet'}
+                  <strong>Rating:</strong> {tutorFullProfile?.averageRating ? `${tutorFullProfile.averageRating}/5 (${tutorFullProfile.totalReviews} reviews)` : 'No reviews yet'}
                 </div>
               </div>
-              {tutorProfile?.title && (
+              {tutorFullProfile?.title && (
                 <div style={{ marginBottom: '1rem' }}>
-                  <strong>Profile Title:</strong> {tutorProfile.title}
+                  <strong>Profile Title:</strong> {tutorFullProfile.title}
                 </div>
               )}
             </div>
@@ -715,7 +826,7 @@ export default function TutorDashboard() {
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>Subjects</label>
                   <select
-                    value={profileData.subject || (tutorProfile?.subjects && tutorProfile.subjects[0]) || ''}
+                    value={profileData.subject || (tutorFullProfile?.subjects && tutorFullProfile.subjects[0]) || ''}
                     onChange={e => setProfileData(prev => ({ ...prev, subject: e.target.value }))}
                     className={styles.formInput}
                     aria-label="Select subject"
@@ -727,7 +838,7 @@ export default function TutorDashboard() {
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>Languages</label>
                   <select
-                    value={profileData.language || (tutorProfile?.languages && tutorProfile.languages[0]) || ''}
+                    value={profileData.language || (tutorFullProfile?.languages && tutorFullProfile.languages[0]) || ''}
                     onChange={e => setProfileData(prev => ({ ...prev, language: e.target.value }))}
                     className={styles.formInput}
                     aria-label="Select language"
@@ -739,7 +850,7 @@ export default function TutorDashboard() {
                 <div className={styles.formGroup}>
                   <label className={styles.formLabel}>Teaching Methods</label>
                   <select
-                    value={profileData.teachingMethod || (tutorProfile?.teachingMethods && tutorProfile.teachingMethods[0]) || ''}
+                    value={profileData.teachingMethod || (tutorFullProfile?.teachingMethods && tutorFullProfile.teachingMethods[0]) || ''}
                     onChange={e => setProfileData(prev => ({ ...prev, teachingMethod: e.target.value }))}
                     className={styles.formInput}
                     aria-label="Select teaching method"
@@ -872,6 +983,21 @@ export default function TutorDashboard() {
                 </button>
               </div>
             </div>
+          </div>
+        )}
+        {activeView === 'lessons' && (
+          <div className={styles.lessonsView}>
+            <h1 className={styles.sectionTitle}>Your Lessons</h1>
+            <h2>Upcoming Lessons</h2>
+            {lessons.filter(l => new Date(l.date) >= new Date()).length === 0 ? <p>No upcoming lessons.</p> :
+              lessons.filter(l => new Date(l.date) >= new Date()).map(l => (
+                <LessonCard key={l.id} lesson={l} isTutor={true} />
+              ))}
+            <h2>Past Lessons</h2>
+            {lessons.filter(l => new Date(l.date) < new Date()).length === 0 ? <p>No past lessons.</p> :
+              lessons.filter(l => new Date(l.date) < new Date()).map(l => (
+                <LessonCard key={l.id} lesson={l} isTutor={true} />
+              ))}
           </div>
         )}
       </div>

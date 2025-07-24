@@ -24,6 +24,10 @@ import {
   X,
 } from "lucide-react"
 import styles from "../../styles/TutorProfile.module.css"
+import { useSearchParams } from "next/navigation"
+import { initializeApp } from "firebase/app"
+import { getFirestore, doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore"
+import { useRouter } from "next/navigation"
 
 // Type definitions
 interface Language {
@@ -344,8 +348,21 @@ function BookingModal({ isOpen, onClose, tutor, lessonType = "trial" }: BookingM
   const [selectedDate, setSelectedDate] = useState("")
   const [selectedTime, setSelectedTime] = useState("")
   const [message, setMessage] = useState("")
+  const [user, setUser] = useState<any>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const userStr = localStorage.getItem("user");
+      if (userStr) setUser(JSON.parse(userStr));
+      else if (isOpen) {
+        router.replace("/auth/login");
+      }
+    }
+  }, [isOpen, router]);
 
   if (!isOpen) return null
+  if (!user) return null;
 
   const today = new Date()
   const dates = Array.from({ length: 14 }, (_, i) => {
@@ -356,8 +373,49 @@ function BookingModal({ isOpen, onClose, tutor, lessonType = "trial" }: BookingM
 
   const getAvailableSlots = (date: Date): string[] => {
     const dayName = date.toLocaleDateString("en-US", { weekday: "long" }).toLowerCase()
-    return tutor.availability.schedule[dayName] || []
+    return (tutor.availability?.schedule || {})[dayName] || []
   }
+
+  const handleBookLesson = async () => {
+    if (!selectedDate || !selectedTime || !user) return;
+
+    // Initialize Firebase (if not already)
+    const firebaseConfig = {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+      measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+    };
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    try {
+      await addDoc(collection(db, "lessons"), {
+        tutorId: tutor.id,
+        tutorName: tutor.name,
+        studentId: user.id || user.email,
+        studentName: user.name || user.email,
+        date: selectedDate,
+        time: selectedTime,
+        lessonType,
+        message,
+        createdAt: serverTimestamp(),
+        status: "booked"
+      });
+      alert("Lesson booked successfully!");
+      if (user.userType === "tutor") {
+        router.replace("/tutor-dash?tab=lessons");
+      } else {
+        router.replace("/student-dash?tab=lessons");
+      }
+    } catch (error) {
+      alert("Failed to book lesson. Please try again.");
+      console.error(error);
+    }
+  };
 
   return (
     <div className={styles.modalOverlay}>
@@ -403,7 +461,7 @@ function BookingModal({ isOpen, onClose, tutor, lessonType = "trial" }: BookingM
 
             {/* Time Selection */}
             <div className={styles.bookingSection}>
-              <h4 className={styles.sectionTitle}>Select Time ({tutor.availability.timezone})</h4>
+              <h4 className={styles.sectionTitle}>Select Time ({tutor.availability?.timezone || 'N/A'})</h4>
               {selectedDate ? (
                 <div className={styles.timeGrid}>
                   {getAvailableSlots(new Date(selectedDate)).map((time) => (
@@ -477,6 +535,7 @@ function BookingModal({ isOpen, onClose, tutor, lessonType = "trial" }: BookingM
           <button
             disabled={!selectedDate || !selectedTime}
             className={`${styles.bookButton} ${!selectedDate || !selectedTime ? styles.disabled : ""}`}
+            onClick={handleBookLesson}
           >
             Book Lesson - ${lessonType === "trial" ? tutor.trialRate : tutor.hourlyRate}
           </button>
@@ -534,13 +593,82 @@ function ReviewCard({ review }: ReviewCardProps) {
 }
 
 // Main Tutor Profile Component
-export default function TutorProfile({ params }: { params: { id: string } }) {
-  const [tutor] = useState<Tutor>(() => getTutorData(params.id))
-  const [activeTab, setActiveTab] = useState("about")
-  const [isFavorited, setIsFavorited] = useState(false)
-  const [showBookingModal, setShowBookingModal] = useState(false)
-  const [bookingType, setBookingType] = useState("trial")
-  const [showVideoModal, setShowVideoModal] = useState(false)
+export default function TutorProfile() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const id = searchParams.get("id");
+  const tutorJson = searchParams.get("tutor");
+  const [tutor, setTutor] = useState<Tutor | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("about");
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [bookingType, setBookingType] = useState("trial");
+  const [showVideoModal, setShowVideoModal] = useState(false);
+
+  useEffect(() => {
+    if (tutorJson) {
+      try {
+        const parsedTutor = JSON.parse(decodeURIComponent(tutorJson));
+        // Provide default availability if missing
+        if (!parsedTutor.availability || !parsedTutor.availability.schedule) {
+          parsedTutor.availability = parsedTutor.availability || {};
+          parsedTutor.availability.timezone = parsedTutor.availability.timezone || 'UTC';
+          parsedTutor.availability.schedule = {
+            monday: ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00"],
+            tuesday: ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00", "17:00"],
+            wednesday: ["09:00", "10:00", "11:00", "14:00", "15:00"],
+            thursday: ["09:00", "10:00", "11:00", "14:00", "15:00", "16:00", "17:00"],
+            friday: ["09:00", "10:00", "11:00", "14:00", "15:00"],
+            saturday: ["10:00", "11:00", "14:00", "15:00"],
+            sunday: ["14:00", "15:00", "16:00"],
+          };
+        }
+        setTutor(parsedTutor);
+        setLoading(false);
+        return;
+      } catch (e) {
+        setError("Failed to parse tutor data from URL.");
+        setLoading(false);
+        return;
+      }
+    }
+    if (!id) {
+      router.replace("/landing-page");
+      return;
+    }
+    async function fetchTutor() {
+      setLoading(true);
+      try {
+        const firebaseConfig = {
+          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
+          measurementId: process.env.NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID,
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const docRef = doc(db, "users", id);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          setTutor({ id: docSnap.id, ...docSnap.data() } as Tutor);
+        } else {
+          setError("Tutor not found.");
+        }
+      } catch (e) {
+        setError("Failed to fetch tutor data.");
+      }
+      setLoading(false);
+    }
+    fetchTutor();
+  }, [id, tutorJson, router]);
+
+  if (loading) return <div style={{ padding: 40, textAlign: "center" }}>Loading...</div>;
+  if (error || !tutor) return <div style={{ padding: 40, textAlign: "center", color: "red" }}>{error || "Tutor not found."}</div>;
 
   const handleBookTrial = () => {
     setBookingType("trial")
@@ -615,7 +743,7 @@ export default function TutorProfile({ params }: { params: { id: string } }) {
                 </div>
 
                 <div className={styles.profileBadges}>
-                  {tutor.badges.map((badge) => (
+                  {(tutor.badges || []).map((badge) => (
                     <span key={badge} className={styles.badge}>
                       <Award className="w-4 h-4" />
                       {badge}
@@ -670,7 +798,7 @@ export default function TutorProfile({ params }: { params: { id: string } }) {
                     Languages
                   </h3>
                   <div className={styles.languagesList}>
-                    {tutor.languages.map((lang) => (
+                    {(tutor.languages || []).map((lang) => (
                       <div key={lang.name} className={styles.languageItem}>
                         <span className={styles.languageName}>{lang.name}</span>
                         <span className={styles.languageLevel}>{lang.level}</span>
@@ -724,7 +852,7 @@ export default function TutorProfile({ params }: { params: { id: string } }) {
               <div className={styles.specialtiesSection}>
                 <h3 className={styles.sectionTitle}>Specialties</h3>
                 <div className={styles.specialtiesList}>
-                  {tutor.specialties.map((specialty) => (
+                  {(tutor.specialties || []).map((specialty) => (
                     <span key={specialty} className={styles.specialtyTag}>
                       {specialty}
                     </span>
@@ -775,7 +903,7 @@ export default function TutorProfile({ params }: { params: { id: string } }) {
             {activeTab === "about" && (
               <div className={styles.aboutContent}>
                 <div className={styles.aboutText}>
-                  {tutor.about.split("\n\n").map((paragraph, index) => (
+                  {(tutor.about || '').split("\n\n").map((paragraph, index) => (
                     <p key={index} className={styles.aboutParagraph}>
                       {paragraph}
                     </p>
@@ -790,7 +918,7 @@ export default function TutorProfile({ params }: { params: { id: string } }) {
                 <div className={styles.subjectsSection}>
                   <h3 className={styles.sectionTitle}>Subjects I Teach</h3>
                   <div className={styles.subjectsList}>
-                    {tutor.subjects.map((subject) => (
+                    {(tutor.subjects || []).map((subject) => (
                       <span key={subject} className={styles.subjectTag}>
                         <Globe className="w-4 h-4" />
                         {subject}
@@ -810,7 +938,7 @@ export default function TutorProfile({ params }: { params: { id: string } }) {
                     Education
                   </h3>
                   <div className={styles.educationList}>
-                    {tutor.education.map((edu, index) => (
+                    {(tutor.education || []).map((edu, index) => (
                       <div key={index} className={styles.educationItem}>
                         <div className={styles.educationDegree}>{edu.degree}</div>
                         <div className={styles.educationInstitution}>{edu.institution}</div>
@@ -826,7 +954,7 @@ export default function TutorProfile({ params }: { params: { id: string } }) {
                     Certifications
                   </h3>
                   <div className={styles.certificationsList}>
-                    {tutor.certifications.map((cert, index) => (
+                    {(tutor.certifications || []).map((cert, index) => (
                       <div key={index} className={styles.certificationItem}>
                         <div className={styles.certificationName}>{cert.name}</div>
                         <div className={styles.certificationIssuer}>
@@ -843,7 +971,7 @@ export default function TutorProfile({ params }: { params: { id: string } }) {
                     Work Experience
                   </h3>
                   <div className={styles.workList}>
-                    {tutor.workExperience.map((work, index) => (
+                    {(tutor.workExperience || []).map((work, index) => (
                       <div key={index} className={styles.workItem}>
                         <div className={styles.workPosition}>{work.position}</div>
                         <div className={styles.workCompany}>{work.company}</div>
@@ -877,7 +1005,7 @@ export default function TutorProfile({ params }: { params: { id: string } }) {
                 </div>
 
                 <div className={styles.reviewsList}>
-                  {tutor.reviews.map((review) => (
+                  {(tutor.reviews || []).map((review) => (
                     <ReviewCard key={review.id} review={review} />
                   ))}
                 </div>
@@ -890,16 +1018,16 @@ export default function TutorProfile({ params }: { params: { id: string } }) {
                 <div className={styles.timezoneInfo}>
                   <h3 className={styles.sectionTitle}>
                     <Clock className="w-5 h-5" />
-                    Availability ({tutor.availability.timezone})
+                    Availability ({tutor.availability?.timezone || 'N/A'})
                   </h3>
                   <p className={styles.timezoneNote}>
-                    Times shown are in {tutor.availability.timezone}. The schedule will automatically adjust to your
+                    Times shown are in {tutor.availability?.timezone || 'N/A'}. The schedule will automatically adjust to your
                     local timezone when booking.
                   </p>
                 </div>
 
                 <div className={styles.scheduleGrid}>
-                  {Object.entries(tutor.availability.schedule).map(([day, slots]) => (
+                  {Object.entries(tutor.availability?.schedule || {}).map(([day, slots]) => (
                     <div key={day} className={styles.scheduleDay}>
                       <h4 className={styles.dayName}>{day.charAt(0).toUpperCase() + day.slice(1)}</h4>
                       <div className={styles.timeSlots}>

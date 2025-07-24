@@ -827,7 +827,13 @@ function TutorCard({ tutor }: TutorCardProps) {
 
           <div className={styles.actionButtons}>
             <button className={styles.bookTrialButton}>Book trial lesson</button>
-            <Link href={`/profile`} className={styles.sendMessageButton}>
+            <Link href={{
+              pathname: "/profile",
+              query: {
+                tutor: encodeURIComponent(JSON.stringify(tutor)),
+                id: tutor.id
+              }
+            }} className={styles.sendMessageButton}>
               View Profile
             </Link>
           </div>

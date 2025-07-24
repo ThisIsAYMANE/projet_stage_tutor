@@ -16,6 +16,12 @@ const TutorCard: React.FC<TutorCardProps> = ({ tutor }) => {
   const profilePicture = tutor.profilePicture || tutor.profilePic || "/public/assets/images/haha.jpg";
   const id = tutor.id;
 
+  // Debug log
+  console.log('TutorCard tutor:', tutor);
+  if (!id) {
+    console.warn('TutorCard: tutor is missing id:', tutor);
+  }
+
   return (
     <div style={{
       background: "#fff",
@@ -51,22 +57,39 @@ const TutorCard: React.FC<TutorCardProps> = ({ tutor }) => {
         </span>
         <span style={{ color: "#e11d48", fontWeight: 700, fontSize: "1.1rem" }}>{hourlyRate}</span>
       </div>
-      <Link href={`/tutor/${id}`} style={{ width: "100%", textDecoration: "none" }}>
-  <button className={styles.viewProfile} style={{
-    width: "100%",
-    background: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
-    color: "#fff",
-    border: "none",
-    borderRadius: "14px",
-    padding: "0.9rem 0",
-    fontWeight: 700,
-    fontSize: "1.1rem",
-    cursor: "pointer",
-    marginTop: "0.5rem"
-  }}>
-    View Profile
-  </button>
-</Link>
+      {id ? (
+        <Link href={`/profile?id=${id}`} style={{ width: "100%", textDecoration: "none" }}>
+          <button className={styles.viewProfile} style={{
+            width: "100%",
+            background: "linear-gradient(135deg, #ec4899 0%, #db2777 100%)",
+            color: "#fff",
+            border: "none",
+            borderRadius: "14px",
+            padding: "0.9rem 0",
+            fontWeight: 700,
+            fontSize: "1.1rem",
+            cursor: "pointer",
+            marginTop: "0.5rem"
+          }}>
+            View Profile
+          </button>
+        </Link>
+      ) : (
+        <button className={styles.viewProfile} style={{
+          width: "100%",
+          background: "#e5e7eb",
+          color: "#aaa",
+          border: "none",
+          borderRadius: "14px",
+          padding: "0.9rem 0",
+          fontWeight: 700,
+          fontSize: "1.1rem",
+          cursor: "not-allowed",
+          marginTop: "0.5rem"
+        }} title="No profile available">
+          No Profile Available
+        </button>
+      )}
     </div>
   );
 };

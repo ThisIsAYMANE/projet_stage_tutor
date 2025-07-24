@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import styles from '../../styles/TutorDash.module.css';
 import { db } from '../../../firebase';
 import { doc, getDoc, collection, query, where, getDocs, orderBy, onSnapshot, addDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { useSearchParams } from 'next/navigation';
+import { Calendar, Clock, User, BadgeCheck } from "lucide-react";
 
 interface Message {
   id: string;
@@ -30,8 +32,68 @@ interface StudentProfile {
   createdAt: string;
 }
 
+function LessonCard({ lesson, isTutor }) {
+  return (
+    <div style={{
+      border: "1px solid #eee",
+      borderRadius: 12,
+      boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
+      padding: "1.2rem 1.5rem",
+      marginBottom: 18,
+      background: "#fff",
+      display: "flex",
+      flexDirection: "column",
+      gap: 8,
+      maxWidth: 420
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+        <Calendar style={{ color: "#db2777" }} size={20} />
+        <span style={{ fontWeight: 600 }}>{lesson.date}</span>
+        <Clock style={{ color: "#db2777" }} size={20} />
+        <span style={{ fontWeight: 600 }}>{lesson.time}</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <User style={{ color: "#2563eb" }} size={18} />
+        <span>
+          {isTutor ? (
+            <>Student: <b>{lesson.studentName}</b></>
+          ) : (
+            <>Tutor: <b>{lesson.tutorName}</b></>
+          )}
+        </span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <BadgeCheck style={{ color: lesson.status === "booked" ? "#22c55e" : "#f87171" }} size={18} />
+        <span style={{
+          color: lesson.status === "booked" ? "#22c55e" : "#f87171",
+          fontWeight: 600,
+          background: lesson.status === "booked" ? "#dcfce7" : "#fee2e2",
+          borderRadius: 8,
+          padding: "2px 10px"
+        }}>
+          {lesson.status.charAt(0).toUpperCase() + lesson.status.slice(1)}
+        </span>
+      </div>
+      {lesson.message && (
+        <div style={{
+          background: "#f3f4f6",
+          borderRadius: 8,
+          padding: "8px 12px",
+          marginTop: 6,
+          fontSize: 14,
+          color: "#555"
+        }}>
+          <b>Message:</b> {lesson.message}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function StudentDashboard() {
-  const [activeView, setActiveView] = useState<'messages' | 'profile'>('messages');
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab') || 'messages';
+  const [activeView, setActiveView] = useState<'messages' | 'profile' | 'lessons'>(initialTab as any);
   const [activeConversation, setActiveConversation] = useState<string>('');
   const [messageInput, setMessageInput] = useState('');
   const [loading, setLoading] = useState(true);
@@ -47,6 +109,9 @@ export default function StudentDashboard() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [resolvedTutorName, setResolvedTutorName] = useState<string | null>(null);
   const [resolvedTutorNames, setResolvedTutorNames] = useState<{ [emailOrId: string]: string }>({});
+
+  // Lessons data
+  const [lessons, setLessons] = useState<any[]>([]);
 
   // Fetch student profile and conversations on mount
   useEffect(() => {
@@ -176,6 +241,22 @@ export default function StudentDashboard() {
     return () => unsub();
   }, [activeConversation]);
 
+  // Fetch lessons when the 'lessons' view is active
+  useEffect(() => {
+    if (activeView === 'lessons') {
+      const fetchLessons = async () => {
+        const userStr = typeof window !== 'undefined' ? localStorage.getItem('user') : null;
+        if (!userStr) return;
+        const user = JSON.parse(userStr);
+        const q = query(collection(db, 'lessons'), where('studentId', '==', user.id || user.email));
+        const snapshot = await getDocs(q);
+        const lessonsData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setLessons(lessonsData);
+      };
+      fetchLessons();
+    }
+  }, [activeView]);
+
   const handleSendMessage = async () => {
     if (messageInput.trim() && activeConversation) {
       try {
@@ -284,6 +365,7 @@ export default function StudentDashboard() {
           <div className={styles.dropdownMenu}>
             <div className={styles.dropdownItem} onClick={() => { setActiveView('messages'); setMenuOpen(false); }}>Messages</div>
             <div className={styles.dropdownItem} onClick={() => { setActiveView('profile'); setMenuOpen(false); }}>Profile</div>
+            <div className={styles.dropdownItem} onClick={() => { setActiveView('lessons'); setMenuOpen(false); }}>Lessons</div>
             <div className={styles.dropdownItem}>Logout</div>
           </div>
         )}
@@ -310,6 +392,10 @@ export default function StudentDashboard() {
           >
             <span className={styles.navIcon}>👤</span>
             Profile
+          </div>
+          <div className={styles.navItem + ' ' + (activeView === 'lessons' ? styles.active : '')} onClick={() => setActiveView('lessons')}>
+            <span className={styles.navIcon}>📅</span>
+            Lessons
           </div>
         </nav>
         <div className={styles.logout}>
@@ -432,6 +518,21 @@ export default function StudentDashboard() {
               </div>
               
             </div>
+          </div>
+        )}
+        {activeView === 'lessons' && (
+          <div className={styles.lessonsView}>
+            <h1 className={styles.sectionTitle}>Your Lessons</h1>
+            <h2>Upcoming Lessons</h2>
+            {lessons.filter(l => new Date(l.date) >= new Date()).length === 0 ? <p>No upcoming lessons.</p> :
+              lessons.filter(l => new Date(l.date) >= new Date()).map(l => (
+                <LessonCard key={l.id} lesson={l} isTutor={false} />
+              ))}
+            <h2>Past Lessons</h2>
+            {lessons.filter(l => new Date(l.date) < new Date()).length === 0 ? <p>No past lessons.</p> :
+              lessons.filter(l => new Date(l.date) < new Date()).map(l => (
+                <LessonCard key={l.id} lesson={l} isTutor={false} />
+              ))}
           </div>
         )}
       </div>
